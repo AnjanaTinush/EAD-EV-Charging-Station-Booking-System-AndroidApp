@@ -171,24 +171,25 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        // Create User object with isActivate = false
+        // Create User object with isActivate = true (automatically activated)
         val user = User(
             nic = nic,
             fullName = fullName,
             email = email,
             phone = phone,
             password = password,
-            isActivate = false  // Default to false as per requirement
+            isActivate = true  // Automatically activate new accounts
         )
 
         // Register user in local database
         val result = userRepository.registerUser(user)
 
         if (result > 0) {
-            Toast.makeText(this, "Registration successful! Your account is pending activation.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Registration successful! Please login with your credentials.", Toast.LENGTH_LONG).show()
 
-            // Navigate back to login
+            // Navigate to login page
             val intent = Intent(this, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
             finish()
         } else {

@@ -141,6 +141,24 @@ class UserRepository(context: Context) {
         )
     }
 
+    // Update user
+    fun updateUser(user: User): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(DatabaseHelper.COLUMN_FULL_NAME, user.fullName)
+            put(DatabaseHelper.COLUMN_EMAIL, user.email)
+            put(DatabaseHelper.COLUMN_PHONE, user.phone)
+            put(DatabaseHelper.COLUMN_PASSWORD, user.password)
+            put(DatabaseHelper.COLUMN_IS_ACTIVATE, if (user.isActivate) 1 else 0)
+        }
+        return db.update(
+            DatabaseHelper.TABLE_USER,
+            values,
+            "${DatabaseHelper.COLUMN_NIC} = ?",
+            arrayOf(user.nic)
+        )
+    }
+
     // Delete user
     fun deleteUser(nic: String): Int {
         val db = dbHelper.writableDatabase
