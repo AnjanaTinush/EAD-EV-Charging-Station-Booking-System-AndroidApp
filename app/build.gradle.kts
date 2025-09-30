@@ -1,3 +1,5 @@
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,7 @@ plugins {
 android {
     namespace = "com.example.ev_syatem"
     compileSdk = 36
+
 
     defaultConfig {
         applicationId = "com.example.ev_syatem"
