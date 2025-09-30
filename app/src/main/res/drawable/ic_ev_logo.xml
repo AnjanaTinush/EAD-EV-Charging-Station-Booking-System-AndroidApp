@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
 
-</selector>
+    <!-- Background Circle -->
+    <path
+        android:fillColor="@color/primary_green"
+        android:pathData="M60,60m-55,0a55,55 0,1 1,110 0a55,55 0,1 1,-110 0"/>
+
+    <!-- Electric Car Icon -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M30,50 L90,50 Q95,50 95,55 L95,70 Q95,75 90,75 L85,75 L85,80 Q85,82 83,82 L77,82 Q75,82 75,80 L75,75 L45,75 L45,80 Q45,82 43,82 L37,82 Q35,82 35,80 L35,75 L30,75 Q25,75 25,70 L25,55 Q25,50 30,50 Z"/>
+
+    <!-- Car Details -->
+    <path
+        android:fillColor="@color/primary_green"
+        android:pathData="M35,55 L85,55 L85,65 L35,65 Z"/>
+
+    <!-- Wheels -->
+    <path
+        android:fillColor="@color/dark_gray"
+        android:pathData="M40,77m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"/>
+    <path
+        android:fillColor="@color/dark_gray"
+        android:pathData="M80,77m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"/>
+
+    <!-- Lightning Bolt -->
+    <path
+        android:fillColor="@color/accent_yellow"
+        android:pathData="M55,30 L65,30 L60,40 L68,40 L52,55 L58,45 L50,45 L55,30 Z"/>
+
+</vector>

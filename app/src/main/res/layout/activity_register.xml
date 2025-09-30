@@ -24,22 +24,22 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginTop="48dp">
+            android:layout_marginTop="32dp">
 
             <!-- Logo -->
             <ImageView
-                android:id="@+id/login_logo"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:id="@+id/register_logo"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
                 android:src="@drawable/ic_ev_logo"
                 android:layout_marginBottom="16dp"/>
 
             <!-- Welcome Text -->
             <TextView
-                android:id="@+id/welcome_title"
+                android:id="@+id/register_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Welcome Back!"
+                android:text="Create Account"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textColor="@color/primary_green"
@@ -47,22 +47,22 @@
 
             <!-- Subtitle -->
             <TextView
-                android:id="@+id/welcome_subtitle"
+                android:id="@+id/register_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sign in to access your EV charging account"
+                android:text="Join the EV charging network today"
                 android:textSize="16sp"
                 android:textColor="@color/text_secondary"
                 android:gravity="center"/>
 
         </LinearLayout>
 
-        <!-- Login Form Card -->
+        <!-- Registration Form Card -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/login_card"
+            android:id="@+id/register_card"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="32dp"
             app:cardCornerRadius="24dp"
             app:cardElevation="0dp"
             app:cardBackgroundColor="@color/card_background"
@@ -80,7 +80,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="National Identity Card (NIC)"
+                    android:text="National Identity Card (NIC) *"
                     android:textSize="14sp"
                     android:textColor="@color/text_primary"
                     android:textStyle="bold"
@@ -90,7 +90,7 @@
                     android:id="@+id/nic_input_layout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="20dp"
+                    android:layout_marginBottom="16dp"
                     app:boxStrokeColor="@color/primary_green"
                     app:hintTextColor="@color/primary_green"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
@@ -107,11 +107,101 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Full Name Input Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Full Name *"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/full_name_input_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:boxStrokeColor="@color/primary_green"
+                    app:hintTextColor="@color/primary_green"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/fullNameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter your full name"
+                        android:inputType="textPersonName"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"/>
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Email Input Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Email Address *"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/email_input_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:boxStrokeColor="@color/primary_green"
+                    app:hintTextColor="@color/primary_green"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/emailInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter your email address"
+                        android:inputType="textEmailAddress"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"/>
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Phone Input Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Phone Number *"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/phone_input_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:boxStrokeColor="@color/primary_green"
+                    app:hintTextColor="@color/primary_green"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/phoneInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter your phone number"
+                        android:inputType="phone"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"/>
+
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <!-- Password Input Section -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Password"
+                    android:text="Password *"
                     android:textSize="14sp"
                     android:textColor="@color/text_primary"
                     android:textStyle="bold"
@@ -121,7 +211,7 @@
                     android:id="@+id/password_input_layout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="16dp"
                     app:boxStrokeColor="@color/primary_green"
                     app:hintTextColor="@color/primary_green"
                     app:endIconMode="password_toggle"
@@ -132,31 +222,51 @@
                         android:id="@+id/passwordInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Enter your password"
+                        android:hint="Create a password"
                         android:inputType="textPassword"
                         android:textColor="@color/text_primary"
                         android:textColorHint="@color/text_hint"/>
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Forgot Password Link -->
+                <!-- Confirm Password Input Section -->
                 <TextView
-                    android:id="@+id/forgot_password"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Forgot Password?"
-                    android:textColor="@color/electric_blue"
+                    android:text="Confirm Password *"
                     android:textSize="14sp"
-                    android:layout_gravity="end"
-                    android:layout_marginBottom="32dp"
-                    android:padding="8dp"/>
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
 
-                <!-- Login Button -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/confirm_password_input_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    app:boxStrokeColor="@color/primary_green"
+                    app:hintTextColor="@color/primary_green"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/primary_green"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/confirmPasswordInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Confirm your password"
+                        android:inputType="textPassword"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"/>
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Register Button -->
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/loginButton"
+                    android:id="@+id/registerButton"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:text="LOGIN"
+                    android:text="CREATE ACCOUNT"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:backgroundTint="@color/primary_green"
@@ -171,12 +281,12 @@
                     android:background="@color/light_gray"
                     android:layout_marginVertical="16dp"/>
 
-                <!-- Register Link -->
+                <!-- Login Link -->
                 <TextView
-                    android:id="@+id/register_link"
+                    android:id="@+id/login_link"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Don't have an account? Register here"
+                    android:text="Already have an account? Sign in here"
                     android:textColor="@color/electric_blue"
                     android:textSize="14sp"
                     android:layout_gravity="center"
@@ -193,8 +303,8 @@
             android:text="© 2024 EV Charging Station System"
             android:textSize="12sp"
             android:textColor="@color/text_hint"
-            android:layout_marginTop="32dp"
-            app:layout_constraintTop_toBottomOf="@id/login_card"
+            android:layout_marginTop="24dp"
+            app:layout_constraintTop_toBottomOf="@id/register_card"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>

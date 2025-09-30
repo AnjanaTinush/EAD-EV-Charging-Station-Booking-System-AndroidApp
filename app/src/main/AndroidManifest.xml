@@ -27,6 +27,21 @@
             android:name=".LoginActivity"
             android:exported="false" />
 
+        <!-- RegisterActivity (navigated from login) -->
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+
+        <!-- HomeActivity (home screen after successful registration/login) -->
+        <activity
+            android:name=".HomeActivity"
+            android:exported="false" />
+
+        <!-- ProfileActivity (user profile screen) -->
+        <activity
+            android:name=".ProfileActivity"
+            android:exported="false" />
+
         <!-- MainActivity (your dashboard / home after login) -->
         <activity
             android:name=".MainActivity"
