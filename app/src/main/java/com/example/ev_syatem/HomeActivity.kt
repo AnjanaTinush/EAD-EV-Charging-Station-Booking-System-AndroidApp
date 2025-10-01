@@ -3,12 +3,9 @@ package com.example.ev_syatem
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.repository.ReservationRepository
@@ -22,7 +19,6 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var approvedCountText: TextView
     private lateinit var bookStationButton: MaterialButton
     private lateinit var myReservationsButton: MaterialButton
-    private lateinit var toolbar: Toolbar
     private lateinit var bottomNavigation: BottomNavigationView
 
     private lateinit var userRepository: UserRepository
@@ -32,13 +28,13 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set status bar color to match background
+        // Set status bar to transparent for modern look
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = getColor(R.color.primary_green)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
 
-        // Make status bar content light (for dark background)
+        // Make status bar content dark (for light background)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightStatusBars = true
         }
 
         setContentView(R.layout.activity_home)
@@ -58,7 +54,6 @@ class HomeActivity : AppCompatActivity() {
         reservationRepository = ReservationRepository(this)
 
         initializeViews()
-        setupToolbar()
         setupBottomNavigation()
         loadUserData()
         loadReservationCounts()
@@ -67,7 +62,6 @@ class HomeActivity : AppCompatActivity() {
 
     private fun initializeViews() {
         try {
-            toolbar = findViewById(R.id.toolbar)
             userNameText = findViewById(R.id.user_name_text)
             pendingCountText = findViewById(R.id.pending_count_text)
             approvedCountText = findViewById(R.id.approved_count_text)
@@ -77,14 +71,6 @@ class HomeActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Error initializing views: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
-        }
-    }
-
-    private fun setupToolbar() {
-        try {
-            setSupportActionBar(toolbar)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error setting up toolbar: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -111,21 +97,6 @@ class HomeActivity : AppCompatActivity() {
                 }
                 else -> false
             }
-        }
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.home_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_logout -> {
-                logout()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
         }
     }
 

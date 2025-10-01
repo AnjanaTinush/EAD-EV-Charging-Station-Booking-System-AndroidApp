@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.repository.UserRepository
@@ -16,7 +15,6 @@ import com.google.android.material.textfield.TextInputEditText
 
 class ProfileActivity : AppCompatActivity() {
 
-    private lateinit var toolbar: Toolbar
     private lateinit var profileNameText: TextView
     private lateinit var profileNicText: TextView
     private lateinit var fullNameInput: TextInputEditText
@@ -34,11 +32,11 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set status bar color
+        // Set status bar to transparent for modern look
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = getColor(R.color.primary_green)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightStatusBars = true
         }
 
         setContentView(R.layout.activity_profile)
@@ -56,14 +54,12 @@ class ProfileActivity : AppCompatActivity() {
         userRepository = UserRepository(this)
 
         initializeViews()
-        setupToolbar()
         setupBottomNavigation()
         loadUserData()
         setupClickListeners()
     }
 
     private fun initializeViews() {
-        toolbar = findViewById(R.id.toolbar)
         profileNameText = findViewById(R.id.profile_name_text)
         profileNicText = findViewById(R.id.profile_nic_text)
         fullNameInput = findViewById(R.id.fullNameInput)
@@ -76,14 +72,6 @@ class ProfileActivity : AppCompatActivity() {
 
         // Initially disable editing
         setEditMode(false)
-    }
-
-    private fun setupToolbar() {
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationOnClickListener {
-            finish()
-        }
     }
 
     private fun setupBottomNavigation() {
