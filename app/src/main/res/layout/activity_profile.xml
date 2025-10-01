@@ -191,10 +191,16 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="0dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/card_background"
+                app:cardBackgroundColor="@android:color/transparent"
                 android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_top_card_background"
+                    android:orientation="vertical">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -321,6 +327,8 @@
                             android:paddingBottom="16dp"/>
 
                     </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
 
                 </LinearLayout>
 

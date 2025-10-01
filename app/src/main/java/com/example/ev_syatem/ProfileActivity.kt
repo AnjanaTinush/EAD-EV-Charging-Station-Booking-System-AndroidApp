@@ -131,12 +131,27 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         logoutButton.setOnClickListener {
-            logout()
+            showLogoutConfirmationDialog()
         }
 
         deactivateAccountButton.setOnClickListener {
             showDeactivateConfirmationDialog()
         }
+    }
+
+    private fun showLogoutConfirmationDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Logout") { dialog, _ ->
+                logout()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(true)
+            .show()
     }
 
     private fun logout() {
