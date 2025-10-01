@@ -3,6 +3,7 @@ package com.example.ev_syatem
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -11,14 +12,13 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.repository.ReservationRepository
 import com.example.ev_syatem.repository.UserRepository
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.button.MaterialButton
 
 class HomeActivity : AppCompatActivity() {
     private lateinit var userNameText: TextView
     private lateinit var pendingCountText: TextView
     private lateinit var approvedCountText: TextView
-    private lateinit var bookStationButton: MaterialButton
-    private lateinit var myReservationsButton: MaterialButton
+    private lateinit var bookStationButton: LinearLayout
+    private lateinit var myReservationsButton: LinearLayout
     private lateinit var bottomNavigation: BottomNavigationView
 
     private lateinit var userRepository: UserRepository
