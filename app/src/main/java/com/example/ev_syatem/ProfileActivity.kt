@@ -22,6 +22,7 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var phoneInput: TextInputEditText
     private lateinit var editToggleButton: MaterialButton
     private lateinit var saveProfileButton: MaterialButton
+    private lateinit var logoutButton: MaterialButton
     private lateinit var deactivateAccountButton: MaterialButton
     private lateinit var bottomNavigation: BottomNavigationView
 
@@ -67,6 +68,7 @@ class ProfileActivity : AppCompatActivity() {
         phoneInput = findViewById(R.id.phoneInput)
         editToggleButton = findViewById(R.id.edit_toggle_button)
         saveProfileButton = findViewById(R.id.save_profile_button)
+        logoutButton = findViewById(R.id.logout_button)
         deactivateAccountButton = findViewById(R.id.deactivate_account_button)
         bottomNavigation = findViewById(R.id.bottom_navigation)
 
@@ -128,9 +130,26 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
 
+        logoutButton.setOnClickListener {
+            logout()
+        }
+
         deactivateAccountButton.setOnClickListener {
             showDeactivateConfirmationDialog()
         }
+    }
+
+    private fun logout() {
+        // Clear user session
+        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
+            .edit()
+            .remove("USER_NIC")
+            .apply()
+
+        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+        // Navigate to login
+        navigateToLogin()
     }
 
     private fun showDeactivateConfirmationDialog() {

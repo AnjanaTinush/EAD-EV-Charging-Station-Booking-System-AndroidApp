@@ -1,39 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
-    <color name="primary_green">#2E7D32</color>
-    <color name="primary_green_dark">#1B5E20</color>
-    <color name="primary_green_light">#4CAF50</color>
+    <!-- Professional Green Palette for EV Charging -->
+    <color name="primary_green">#00C853</color>
+    <color name="primary_green_dark">#00A344</color>
+    <color name="primary_green_darker">#007E33</color>
+    <color name="primary_green_light">#69F0AE</color>
+    <color name="primary_green_lighter">#B9F6CA</color>
 
-    <!-- Secondary Colors -->
-    <color name="electric_blue">#1976D2</color>
-    <color name="electric_blue_dark">#0D47A1</color>
-    <color name="electric_blue_light">#42A5F5</color>
+    <!-- Eco Green Variations -->
+    <color name="eco_green_50">#E8F5E9</color>
+    <color name="eco_green_100">#C8E6C9</color>
+    <color name="eco_green_500">#4CAF50</color>
+    <color name="eco_green_700">#388E3C</color>
+    <color name="eco_green_900">#1B5E20</color>
+
+    <!-- Electric Energy Colors -->
+    <color name="electric_blue">#00BCD4</color>
+    <color name="electric_blue_dark">#0097A7</color>
+    <color name="electric_blue_light">#4DD0E1</color>
+    <color name="electric_cyan">#00E5FF</color>
+
+    <!-- Charging Status Colors -->
+    <color name="charging_active">#76FF03</color>
+    <color name="charging_complete">#00E676</color>
+    <color name="charging_pending">#FFD600</color>
+    <color name="charging_error">#FF3D00</color>
 
     <!-- Accent Colors -->
     <color name="accent_orange">#FF6F00</color>
     <color name="accent_yellow">#FFC107</color>
+    <color name="accent_amber">#FFB300</color>
+    <color name="accent_purple">#7C4DFF</color>
 
-    <!-- Neutral Colors -->
+    <!-- Neutral & Background Colors -->
     <color name="white">#FFFFFF</color>
+    <color name="off_white">#FAFAFA</color>
     <color name="light_gray">#F5F5F5</color>
-    <color name="medium_gray">#9E9E9E</color>
-    <color name="dark_gray">#424242</color>
+    <color name="medium_gray">#E0E0E0</color>
+    <color name="dark_gray">#757575</color>
+    <color name="darker_gray">#424242</color>
     <color name="black">#212121</color>
+    <color name="pure_black">#000000</color>
 
     <!-- Status Colors -->
-    <color name="success_green">#4CAF50</color>
+    <color name="success_green">#00C853</color>
     <color name="warning_amber">#FF9800</color>
     <color name="error_red">#F44336</color>
+    <color name="info_blue">#2196F3</color>
 
     <!-- Background Colors -->
-    <color name="background_primary">#FAFAFA</color>
-    <color name="background_secondary">#F0F4F8</color>
+    <color name="background_primary">#F8FBF9</color>
+    <color name="background_secondary">#E8F5E9</color>
+    <color name="background_tertiary">#F1F8F4</color>
     <color name="card_background">#FFFFFF</color>
+    <color name="card_elevated">#FAFAFA</color>
 
     <!-- Text Colors -->
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
+    <color name="text_tertiary">#9E9E9E</color>
     <color name="text_hint">#BDBDBD</color>
     <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_on_dark">#FFFFFF</color>
+
+    <!-- Overlay Colors -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#40000000</color>
+    <color name="ripple_green">#4000C853</color>
+
+    <!-- Shadow Colors -->
+    <color name="shadow_light">#1A000000</color>
+    <color name="shadow_medium">#33000000</color>
+    <color name="shadow_dark">#4D000000</color>
 </resources>
