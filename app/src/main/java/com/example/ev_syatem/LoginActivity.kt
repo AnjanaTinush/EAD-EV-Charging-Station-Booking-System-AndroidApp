@@ -17,7 +17,6 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var passwordInput: TextInputEditText
     private lateinit var loginButton: MaterialButton
     private lateinit var registerLink: TextView
-    private lateinit var forgotPasswordLink: TextView
     private lateinit var userRepository: UserRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,13 +25,13 @@ class LoginActivity : AppCompatActivity() {
         // Ensure no action bar is shown
         supportActionBar?.hide()
 
-        // Set status bar color to match background
+        // Set status bar color to match green header
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = getColor(R.color.background_primary)
+        window.statusBarColor = getColor(R.color.primary_green)
 
-        // Make status bar content dark (for light background)
+        // Make status bar content light (for dark background)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = true
+            controller.isAppearanceLightStatusBars = false
         }
 
         setContentView(R.layout.activity_login)
@@ -44,11 +43,10 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun initializeViews() {
-        nicInput = findViewById(R.id.nicInput)
-        passwordInput = findViewById(R.id.passwordInput)
-        loginButton = findViewById(R.id.loginButton)
+        nicInput = findViewById(R.id.nic_input)
+        passwordInput = findViewById(R.id.password_input)
+        loginButton = findViewById(R.id.login_button)
         registerLink = findViewById(R.id.register_link)
-        forgotPasswordLink = findViewById(R.id.forgot_password)
     }
 
     private fun setupClickListeners() {
@@ -62,11 +60,6 @@ class LoginActivity : AppCompatActivity() {
             // Navigate to registration activity
             val intent = Intent(this, RegisterActivity::class.java)
             startActivity(intent)
-        }
-
-        forgotPasswordLink.setOnClickListener {
-            // TODO: Implement forgot password functionality
-            // For now, just show a placeholder message
         }
     }
 

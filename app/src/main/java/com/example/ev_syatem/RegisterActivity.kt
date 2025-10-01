@@ -19,7 +19,6 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var emailInput: TextInputEditText
     private lateinit var phoneInput: TextInputEditText
     private lateinit var passwordInput: TextInputEditText
-    private lateinit var confirmPasswordInput: TextInputEditText
     private lateinit var registerButton: MaterialButton
     private lateinit var loginLink: TextView
     private lateinit var userRepository: UserRepository
@@ -30,13 +29,13 @@ class RegisterActivity : AppCompatActivity() {
         // Ensure no action bar is shown
         supportActionBar?.hide()
 
-        // Set status bar color to match background
+        // Set status bar color to match green header
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = getColor(R.color.background_primary)
+        window.statusBarColor = getColor(R.color.primary_green)
 
-        // Make status bar content dark (for light background)
+        // Make status bar content light (for dark background)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = true
+            controller.isAppearanceLightStatusBars = false
         }
 
         setContentView(R.layout.activity_register)
@@ -49,13 +48,12 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun initializeViews() {
-        nicInput = findViewById(R.id.nicInput)
-        fullNameInput = findViewById(R.id.fullNameInput)
-        emailInput = findViewById(R.id.emailInput)
-        phoneInput = findViewById(R.id.phoneInput)
-        passwordInput = findViewById(R.id.passwordInput)
-        confirmPasswordInput = findViewById(R.id.confirmPasswordInput)
-        registerButton = findViewById(R.id.registerButton)
+        nicInput = findViewById(R.id.nic_input)
+        fullNameInput = findViewById(R.id.fullname_input)
+        emailInput = findViewById(R.id.email_input)
+        phoneInput = findViewById(R.id.phone_input)
+        passwordInput = findViewById(R.id.password_input)
+        registerButton = findViewById(R.id.register_button)
         loginLink = findViewById(R.id.login_link)
     }
 
@@ -80,7 +78,6 @@ class RegisterActivity : AppCompatActivity() {
         val email = emailInput.text.toString().trim()
         val phone = phoneInput.text.toString().trim()
         val password = passwordInput.text.toString()
-        val confirmPassword = confirmPasswordInput.text.toString()
 
         // Reset errors
         nicInput.error = null
@@ -88,7 +85,6 @@ class RegisterActivity : AppCompatActivity() {
         emailInput.error = null
         phoneInput.error = null
         passwordInput.error = null
-        confirmPasswordInput.error = null
 
         var isValid = true
 
@@ -134,15 +130,6 @@ class RegisterActivity : AppCompatActivity() {
             isValid = false
         } else if (password.length < 6) {
             passwordInput.error = "Password must be at least 6 characters"
-            isValid = false
-        }
-
-        // Validate Confirm Password
-        if (confirmPassword.isEmpty()) {
-            confirmPasswordInput.error = "Please confirm your password"
-            isValid = false
-        } else if (password != confirmPassword) {
-            confirmPasswordInput.error = "Passwords do not match"
             isValid = false
         }
 
