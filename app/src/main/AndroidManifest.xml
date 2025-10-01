@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions for location and internet -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -40,6 +45,11 @@
         <!-- ProfileActivity (user profile screen) -->
         <activity
             android:name=".ProfileActivity"
+            android:exported="false" />
+
+        <!-- StationMapActivity (map showing charging stations) -->
+        <activity
+            android:name=".StationMapActivity"
             android:exported="false" />
 
         <!-- MainActivity (your dashboard / home after login) -->

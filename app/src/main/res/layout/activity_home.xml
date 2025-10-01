@@ -25,34 +25,70 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="8dp"
                 app:cardBackgroundColor="@color/primary_green"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="28dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="24dp">
+                    android:orientation="horizontal"
+                    android:padding="24dp"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Welcome Back!"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_on_primary"
-                        android:layout_marginBottom="8dp"/>
+                    <!-- User Avatar -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        app:cardCornerRadius="32dp"
+                        app:cardElevation="4dp"
+                        android:layout_marginEnd="16dp">
 
-                    <TextView
-                        android:id="@+id/user_name_text"
-                        android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/avatar_background_blue"
+                            android:gravity="center">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/ic_profile"
+                                android:tint="@android:color/white"/>
+
+                        </LinearLayout>
+
+                    </androidx.cardview.widget.CardView>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="John Doe"
-                        android:textSize="18sp"
-                        android:textColor="@color/text_on_primary"
-                        android:alpha="0.9"/>
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Welcome Back,"
+                            android:textSize="16sp"
+                            android:textColor="@color/text_on_primary"
+                            android:alpha="0.85"
+                            android:layout_marginBottom="4dp"/>
+
+                        <TextView
+                            android:id="@+id/user_name_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="John Doe"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_on_primary"
+                            android:letterSpacing="0.01"
+                            android:maxLines="1"
+                            android:ellipsize="end"/>
+
+                    </LinearLayout>
 
                 </LinearLayout>
 

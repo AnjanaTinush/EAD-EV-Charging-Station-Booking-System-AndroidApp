@@ -88,8 +88,8 @@ class ProfileActivity : AppCompatActivity() {
                     false
                 }
                 R.id.navigation_station -> {
-                    Toast.makeText(this, "Stations feature coming soon!", Toast.LENGTH_SHORT).show()
-                    false
+                    navigateToStationMap()
+                    true
                 }
                 R.id.navigation_profile -> {
                     // Already on profile
@@ -310,6 +310,12 @@ class ProfileActivity : AppCompatActivity() {
     private fun navigateToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+
+    private fun navigateToStationMap() {
+        val intent = Intent(this, StationMapActivity::class.java)
         startActivity(intent)
         finish()
     }
