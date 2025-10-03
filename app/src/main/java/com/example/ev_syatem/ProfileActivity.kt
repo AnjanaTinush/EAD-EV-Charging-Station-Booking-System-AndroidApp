@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.repository.UserRepository
@@ -16,7 +15,6 @@ import com.google.android.material.textfield.TextInputEditText
 
 class ProfileActivity : AppCompatActivity() {
 
-    private lateinit var toolbar: Toolbar
     private lateinit var profileNameText: TextView
     private lateinit var profileNicText: TextView
     private lateinit var fullNameInput: TextInputEditText
@@ -24,6 +22,7 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var phoneInput: TextInputEditText
     private lateinit var editToggleButton: MaterialButton
     private lateinit var saveProfileButton: MaterialButton
+    private lateinit var logoutButton: MaterialButton
     private lateinit var deactivateAccountButton: MaterialButton
     private lateinit var bottomNavigation: BottomNavigationView
 
@@ -34,11 +33,11 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set status bar color
+        // Set status bar to transparent for modern look
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = getColor(R.color.primary_green)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightStatusBars = true
         }
 
         setContentView(R.layout.activity_profile)
@@ -56,14 +55,12 @@ class ProfileActivity : AppCompatActivity() {
         userRepository = UserRepository(this)
 
         initializeViews()
-        setupToolbar()
         setupBottomNavigation()
         loadUserData()
         setupClickListeners()
     }
 
     private fun initializeViews() {
-        toolbar = findViewById(R.id.toolbar)
         profileNameText = findViewById(R.id.profile_name_text)
         profileNicText = findViewById(R.id.profile_nic_text)
         fullNameInput = findViewById(R.id.fullNameInput)
@@ -71,19 +68,12 @@ class ProfileActivity : AppCompatActivity() {
         phoneInput = findViewById(R.id.phoneInput)
         editToggleButton = findViewById(R.id.edit_toggle_button)
         saveProfileButton = findViewById(R.id.save_profile_button)
+        logoutButton = findViewById(R.id.logout_button)
         deactivateAccountButton = findViewById(R.id.deactivate_account_button)
         bottomNavigation = findViewById(R.id.bottom_navigation)
 
         // Initially disable editing
         setEditMode(false)
-    }
-
-    private fun setupToolbar() {
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationOnClickListener {
-            finish()
-        }
     }
 
     private fun setupBottomNavigation() {
@@ -100,8 +90,8 @@ class ProfileActivity : AppCompatActivity() {
                     false
                 }
                 R.id.navigation_station -> {
-                    Toast.makeText(this, "Stations feature coming soon!", Toast.LENGTH_SHORT).show()
-                    false
+                    navigateToStationMap()
+                    true
                 }
                 R.id.navigation_profile -> {
                     // Already on profile
@@ -140,9 +130,41 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
 
+        logoutButton.setOnClickListener {
+            showLogoutConfirmationDialog()
+        }
+
         deactivateAccountButton.setOnClickListener {
             showDeactivateConfirmationDialog()
         }
+    }
+
+    private fun showLogoutConfirmationDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Logout") { dialog, _ ->
+                logout()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(true)
+            .show()
+    }
+
+    private fun logout() {
+        // Clear user session
+        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
+            .edit()
+            .remove("USER_NIC")
+            .apply()
+
+        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+        // Navigate to login
+        navigateToLogin()
     }
 
     private fun showDeactivateConfirmationDialog() {
@@ -322,6 +344,12 @@ class ProfileActivity : AppCompatActivity() {
     private fun navigateToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+
+    private fun navigateToStationMap() {
+        val intent = Intent(this, StationMapActivity::class.java)
         startActivity(intent)
         finish()
     }
