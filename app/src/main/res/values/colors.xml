@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Professional Green Palette for EV Charging -->
-    <color name="primary_green">#00C853</color>
-    <color name="primary_green_dark">#00A344</color>
-    <color name="primary_green_darker">#007E33</color>
-    <color name="primary_green_light">#69F0AE</color>
-    <color name="primary_green_lighter">#B9F6CA</color>
+    <!-- Professional Dark Green Palette for EV Charging -->
+    <color name="primary_green">#1B5E20</color>
+    <color name="primary_green_dark">#0D3818</color>
+    <color name="primary_green_darker">#052410</color>
+    <color name="primary_green_light">#2E7D32</color>
+    <color name="primary_green_lighter">#388E3C</color>
 
-    <!-- Eco Green Variations -->
-    <color name="eco_green_50">#E8F5E9</color>
-    <color name="eco_green_100">#C8E6C9</color>
-    <color name="eco_green_500">#4CAF50</color>
-    <color name="eco_green_700">#388E3C</color>
-    <color name="eco_green_900">#1B5E20</color>
+    <!-- Eco Dark Green Variations -->
+    <color name="eco_green_50">#1B5E20</color>
+    <color name="eco_green_100">#2E7D32</color>
+    <color name="eco_green_500">#1B5E20</color>
+    <color name="eco_green_700">#0D3818</color>
+    <color name="eco_green_900">#052410</color>
 
     <!-- Electric Energy Colors -->
     <color name="electric_blue">#00BCD4</color>
@@ -43,7 +43,7 @@
     <color name="pure_black">#000000</color>
 
     <!-- Status Colors -->
-    <color name="success_green">#00C853</color>
+    <color name="success_green">#1B5E20</color>
     <color name="warning_amber">#FF9800</color>
     <color name="error_red">#F44336</color>
     <color name="info_blue">#2196F3</color>
@@ -66,7 +66,7 @@
     <!-- Overlay Colors -->
     <color name="overlay_dark">#80000000</color>
     <color name="overlay_light">#40000000</color>
-    <color name="ripple_green">#4000C853</color>
+    <color name="ripple_green">#401B5E20</color>
 
     <!-- Shadow Colors -->
     <color name="shadow_light">#1A000000</color>

@@ -56,6 +56,7 @@ class StationMapActivity : AppCompatActivity(), LocationListener {
         setupWebView()
         setupClickListeners()
         setupBottomNavigation()
+        loadLeafletMap() // Load map immediately with default location
         checkLocationPermission()
     }
 

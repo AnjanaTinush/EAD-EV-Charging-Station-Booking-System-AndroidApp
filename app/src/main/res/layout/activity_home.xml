@@ -134,7 +134,7 @@
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@drawable/ic_pending"
-                                    android:tint="@color/primary_green"/>
+                                    android:tint="@android:color/white"/>
 
                             </LinearLayout>
 
@@ -187,7 +187,7 @@
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@drawable/ic_check"
-                                    android:tint="@color/primary_green"/>
+                                    android:tint="@android:color/white"/>
 
                             </LinearLayout>
 
@@ -279,7 +279,7 @@
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
                                     android:src="@drawable/ic_station"
-                                    android:tint="@color/primary_green"/>
+                                    android:tint="@android:color/white"/>
 
                             </LinearLayout>
 
@@ -346,7 +346,7 @@
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
                                     android:src="@drawable/ic_booking"
-                                    android:tint="@color/primary_green"/>
+                                    android:tint="@android:color/white"/>
 
                             </LinearLayout>
 
@@ -434,7 +434,7 @@
                                         android:layout_width="26dp"
                                         android:layout_height="26dp"
                                         android:src="@drawable/ic_ev_logo"
-                                        android:tint="@color/primary_green"/>
+                                        android:tint="@android:color/white"/>
 
                                 </LinearLayout>
 
@@ -502,7 +502,7 @@
                                         android:layout_width="26dp"
                                         android:layout_height="26dp"
                                         android:src="@drawable/ic_energy"
-                                        android:tint="@color/primary_green"/>
+                                        android:tint="@android:color/white"/>
 
                                 </LinearLayout>
 
@@ -535,7 +535,7 @@
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@drawable/ic_verified"
-                                    android:tint="@color/success_green"/>
+                                    android:tint="@android:color/white"/>
 
                             </LinearLayout>
 

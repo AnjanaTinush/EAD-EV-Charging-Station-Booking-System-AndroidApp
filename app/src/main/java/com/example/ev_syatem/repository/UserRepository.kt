@@ -20,7 +20,9 @@ class UserRepository(context: Context) {
             put(DatabaseHelper.COLUMN_PASSWORD, user.password)
             put(DatabaseHelper.COLUMN_IS_ACTIVATE, if (user.isActivate) 1 else 0)
         }
-        return db.insert(DatabaseHelper.TABLE_USER, null, values)
+        val result = db.insert(DatabaseHelper.TABLE_USER, null, values)
+        db.close()
+        return result
     }
 
     // Check if NIC already exists
@@ -35,6 +37,7 @@ class UserRepository(context: Context) {
         )
         val exists = cursor.count > 0
         cursor.close()
+        db.close()
         return exists
     }
 
@@ -50,6 +53,7 @@ class UserRepository(context: Context) {
         )
         val exists = cursor.count > 0
         cursor.close()
+        db.close()
         return exists
     }
 

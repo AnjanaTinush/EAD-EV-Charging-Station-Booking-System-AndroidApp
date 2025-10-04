@@ -27,7 +27,7 @@ class LoginActivity : AppCompatActivity() {
 
         // Set status bar color to match green header
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = getColor(R.color.primary_green)
+        window.statusBarColor = getColor(R.color.primary_green_dark)
 
         // Make status bar content light (for dark background)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
