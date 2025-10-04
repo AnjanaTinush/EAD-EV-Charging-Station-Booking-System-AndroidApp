@@ -169,13 +169,13 @@
                     android:textSize="14sp"
                     android:textStyle="bold"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:textColor="@color/primary_green"
+                    android:textColor="@android:color/white"
                     app:icon="@drawable/ic_edit"
-                    app:iconTint="@color/primary_green"
+                    app:iconTint="@android:color/white"
                     app:iconGravity="textStart"
                     app:cornerRadius="22dp"
                     android:minWidth="90dp"
-                    android:backgroundTint="@color/eco_green_50"/>
+                    android:backgroundTint="@color/primary_green"/>
 
             </LinearLayout>
 
