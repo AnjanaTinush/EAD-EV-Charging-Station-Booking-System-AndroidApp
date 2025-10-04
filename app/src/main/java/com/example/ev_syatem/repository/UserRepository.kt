@@ -5,6 +5,9 @@ import android.content.Context
 import android.database.Cursor
 import com.example.ev_syatem.data.User
 import com.example.ev_syatem.database.DatabaseHelper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class UserRepository(context: Context) {
     private val dbHelper = DatabaseHelper(context)
@@ -12,13 +15,18 @@ class UserRepository(context: Context) {
     // Register new user
     fun registerUser(user: User): Long {
         val db = dbHelper.writableDatabase
+        val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
         val values = ContentValues().apply {
             put(DatabaseHelper.COLUMN_NIC, user.nic)
             put(DatabaseHelper.COLUMN_FULL_NAME, user.fullName)
             put(DatabaseHelper.COLUMN_EMAIL, user.email)
             put(DatabaseHelper.COLUMN_PHONE, user.phone)
             put(DatabaseHelper.COLUMN_PASSWORD, user.password)
-            put(DatabaseHelper.COLUMN_IS_ACTIVATE, if (user.isActivate) 1 else 0)
+            put(DatabaseHelper.COLUMN_IS_ACTIVE, if (user.isActive) 1 else 0)
+            put(DatabaseHelper.COLUMN_ROLE, user.role)
+            put(DatabaseHelper.COLUMN_CREATED_AT_USER, currentTime)
+            put(DatabaseHelper.COLUMN_UPDATED_AT, currentTime)
         }
         val result = db.insert(DatabaseHelper.TABLE_USER, null, values)
         db.close()
@@ -100,10 +108,13 @@ class UserRepository(context: Context) {
     }
 
     // Update user activation status
-    fun updateUserActivation(nic: String, isActivate: Boolean): Int {
+    fun updateUserActivation(nic: String, isActive: Boolean): Int {
         val db = dbHelper.writableDatabase
+        val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
         val values = ContentValues().apply {
-            put(DatabaseHelper.COLUMN_IS_ACTIVATE, if (isActivate) 1 else 0)
+            put(DatabaseHelper.COLUMN_IS_ACTIVE, if (isActive) 1 else 0)
+            put(DatabaseHelper.COLUMN_UPDATED_AT, currentTime)
         }
         return db.update(
             DatabaseHelper.TABLE_USER,
@@ -111,6 +122,16 @@ class UserRepository(context: Context) {
             "${DatabaseHelper.COLUMN_NIC} = ?",
             arrayOf(nic)
         )
+    }
+
+    // Deactivate user account
+    fun deactivateUser(nic: String): Int {
+        return updateUserActivation(nic, false)
+    }
+
+    // Reactivate user account (only by backoffice)
+    fun reactivateUser(nic: String): Int {
+        return updateUserActivation(nic, true)
     }
 
     // Get all users
@@ -141,19 +162,26 @@ class UserRepository(context: Context) {
             email = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_EMAIL)),
             phone = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PHONE)),
             password = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PASSWORD)),
-            isActivate = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_ACTIVATE)) == 1
+            isActive = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_ACTIVE)) == 1,
+            role = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ROLE)),
+            createdAt = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CREATED_AT_USER)) ?: "",
+            updatedAt = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UPDATED_AT)) ?: ""
         )
     }
 
     // Update user
     fun updateUser(user: User): Int {
         val db = dbHelper.writableDatabase
+        val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
         val values = ContentValues().apply {
             put(DatabaseHelper.COLUMN_FULL_NAME, user.fullName)
             put(DatabaseHelper.COLUMN_EMAIL, user.email)
             put(DatabaseHelper.COLUMN_PHONE, user.phone)
             put(DatabaseHelper.COLUMN_PASSWORD, user.password)
-            put(DatabaseHelper.COLUMN_IS_ACTIVATE, if (user.isActivate) 1 else 0)
+            put(DatabaseHelper.COLUMN_IS_ACTIVE, if (user.isActive) 1 else 0)
+            put(DatabaseHelper.COLUMN_ROLE, user.role)
+            put(DatabaseHelper.COLUMN_UPDATED_AT, currentTime)
         }
         return db.update(
             DatabaseHelper.TABLE_USER,

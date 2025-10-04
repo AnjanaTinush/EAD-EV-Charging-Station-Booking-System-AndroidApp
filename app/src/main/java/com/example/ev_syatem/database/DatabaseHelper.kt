@@ -8,7 +8,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "EVChargingStation.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2 // Updated version
 
         // User Table
         const val TABLE_USER = "users"
@@ -18,7 +18,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val COLUMN_EMAIL = "email"
         const val COLUMN_PHONE = "phone"
         const val COLUMN_PASSWORD = "password"
-        const val COLUMN_IS_ACTIVATE = "is_activate"
+        const val COLUMN_IS_ACTIVE = "is_active" // Changed from is_activate
+        const val COLUMN_ROLE = "role"
+        const val COLUMN_CREATED_AT_USER = "created_at"
+        const val COLUMN_UPDATED_AT = "updated_at"
 
         // Reservation Table
         const val TABLE_RESERVATION = "reservations"
@@ -35,10 +38,13 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_NIC TEXT NOT NULL UNIQUE,
                 $COLUMN_FULL_NAME TEXT NOT NULL,
-                $COLUMN_EMAIL TEXT NOT NULL,
+                $COLUMN_EMAIL TEXT NOT NULL UNIQUE,
                 $COLUMN_PHONE TEXT NOT NULL,
                 $COLUMN_PASSWORD TEXT NOT NULL,
-                $COLUMN_IS_ACTIVATE INTEGER DEFAULT 0
+                $COLUMN_IS_ACTIVE INTEGER DEFAULT 1,
+                $COLUMN_ROLE TEXT DEFAULT 'EvOwner',
+                $COLUMN_CREATED_AT_USER TEXT NOT NULL,
+                $COLUMN_UPDATED_AT TEXT
             )
         """
 
