@@ -97,7 +97,7 @@ class LoginActivity : AppCompatActivity() {
 
         if (user != null) {
             // Check if user account is activated
-            if (!user.isActivate) {
+            if (!user.isActive) {
                 Toast.makeText(this, "Your account is pending activation. Please contact admin.", Toast.LENGTH_LONG).show()
                 return
             }

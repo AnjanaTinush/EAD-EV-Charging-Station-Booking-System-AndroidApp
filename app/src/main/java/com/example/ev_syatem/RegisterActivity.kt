@@ -158,14 +158,14 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        // Create User object with isActivate = true (automatically activated)
+        // Create User object with isActive = true (automatically activated)
         val user = User(
             nic = nic,
             fullName = fullName,
             email = email,
             phone = phone,
             password = password,
-            isActivate = true  // Automatically activate new accounts
+            isActive = true  // Automatically activate new accounts
         )
 
         // Register user in local database
