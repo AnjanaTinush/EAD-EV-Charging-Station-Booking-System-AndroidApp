@@ -8,7 +8,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.database.DatabaseHelper
-import com.example.ev_syatem.repository.UserRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.CoroutineScope
@@ -33,13 +32,14 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // Setup system UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green_dark)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
 
         setContentView(R.layout.activity_login)
-        dbHelper = DatabaseHelper(this)
 
+        dbHelper = DatabaseHelper(this)
         initializeViews()
         setupClickListeners()
     }
@@ -53,8 +53,11 @@ class LoginActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         loginButton.setOnClickListener {
-            if (validateLoginForm()) performLogin()
+            if (validateLoginForm()) {
+                performLogin()
+            }
         }
+
         registerLink.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
@@ -86,12 +89,16 @@ class LoginActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
+
                 val jsonBody = JSONObject().apply {
                     put("nic", nic)
                     put("password", password)
                 }
 
-                val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
+                val requestBody = jsonBody.toString()
+                    .toRequestBody("application/json".toMediaType())
+
+                // Use 10.0.2.2 for emulator access to localhost
                 val request = Request.Builder()
                     .url("http://10.0.2.2:8080/api/mobileauth/login")
                     .post(requestBody)
@@ -103,29 +110,60 @@ class LoginActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         val jsonResponse = JSONObject(responseBody)
-                        val user = jsonResponse.getJSONObject("user")
+                        val userObj = jsonResponse.getJSONObject("user")
 
-                        val nicRes = user.getString("nic")
-                        val fullName = user.getString("username")
-                        val email = user.getString("email")
-                        val phone = user.getString("phone")
-                        val role = user.getString("role")
-                        val createdAt = user.getString("createdAt")
+                        // Identify user type (EVOwner or StationOperator)
+                        val userType = userObj.optString("type", "Unknown")
 
-                        // Save to SQLite
+                        // Extract common fields safely
+                        val nicRes = userObj.optString("nic", "")
+                        val email = userObj.optString("email", "")
+                        val phone = userObj.optString("phone", "")
+                        val isActive = userObj.optBoolean("isActive", true)
+
+                        // Role/Name fields based on user type
+                        val fullNameOrUsername = when (userType) {
+                            "EVOwner" -> userObj.optString("fullName", "")
+                            "StationOperator" -> userObj.optString("username", "")
+                            else -> ""
+                        }
+
+                        val role = userObj.optString("role", userType)
+                        val createdAt = jsonResponse.optString("createdAt", "")
+
+                        // ✅ Save user locally
                         dbHelper.clearUsers()
-                        dbHelper.insertUser(nicRes, fullName, email, phone, role, createdAt)
+                        dbHelper.insertUser(
+                            nicRes,
+                            fullNameOrUsername,
+                            email,
+                            phone,
+                            role,
+                            createdAt
+                        )
 
-                        Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@LoginActivity,
+                            "Welcome back, $fullNameOrUsername!",
+                            Toast.LENGTH_LONG
+                        ).show()
 
+                        // ✅ Navigate to Home screen
                         val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         startActivity(intent)
                         finish()
                     } else {
+                        val msg = try {
+                            val errorJson = JSONObject(responseBody)
+                            errorJson.optString("message", "Invalid credentials")
+                        } catch (_: Exception) {
+                            "Invalid credentials"
+                        }
+
                         Toast.makeText(
                             this@LoginActivity,
-                            "Invalid credentials (${response.code})",
+                            msg,
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -134,7 +172,7 @@ class LoginActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@LoginActivity,
-                        "Login failed: ${e.message}",
+                        "Login failed: ${e.localizedMessage}",
                         Toast.LENGTH_LONG
                     ).show()
                 }
