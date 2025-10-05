@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.ev_syatem.database.DatabaseHelper
 import com.example.ev_syatem.repository.UserRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -26,7 +27,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var passwordInput: TextInputEditText
     private lateinit var loginButton: MaterialButton
     private lateinit var registerLink: TextView
-    private lateinit var userRepository: UserRepository
+    private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +38,7 @@ class LoginActivity : AppCompatActivity() {
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
 
         setContentView(R.layout.activity_login)
-        userRepository = UserRepository(this)
+        dbHelper = DatabaseHelper(this)
 
         initializeViews()
         setupClickListeners()
@@ -85,15 +86,12 @@ class LoginActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
+                val jsonBody = JSONObject().apply {
+                    put("nic", nic)
+                    put("password", password)
+                }
 
-                val jsonBody = JSONObject()
-                jsonBody.put("nic", nic)
-                jsonBody.put("password", password)
-
-                val requestBody = jsonBody.toString()
-                    .toRequestBody("application/json".toMediaType())
-
-                // --- IMPORTANT: use 10.0.2.2 for emulator to reach host IIS ---
+                val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
                     .url("http://10.0.2.2:8080/api/mobileauth/login")
                     .post(requestBody)
@@ -104,16 +102,21 @@ class LoginActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "Login successful!",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val jsonResponse = JSONObject(responseBody)
+                        val user = jsonResponse.getJSONObject("user")
 
-                        getSharedPreferences("EV_PREFS", MODE_PRIVATE)
-                            .edit()
-                            .putString("USER_NIC", nic)
-                            .apply()
+                        val nicRes = user.getString("nic")
+                        val fullName = user.getString("username")
+                        val email = user.getString("email")
+                        val phone = user.getString("phone")
+                        val role = user.getString("role")
+                        val createdAt = user.getString("createdAt")
+
+                        // Save to SQLite
+                        dbHelper.clearUsers()
+                        dbHelper.insertUser(nicRes, fullName, email, phone, role, createdAt)
+
+                        Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
 
                         val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -122,13 +125,11 @@ class LoginActivity : AppCompatActivity() {
                     } else {
                         Toast.makeText(
                             this@LoginActivity,
-                            "Invalid NIC or password. Server returned ${response.code}",
+                            "Invalid credentials (${response.code})",
                             Toast.LENGTH_LONG
                         ).show()
-                        passwordInput.error = "Invalid credentials"
                     }
                 }
-
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(

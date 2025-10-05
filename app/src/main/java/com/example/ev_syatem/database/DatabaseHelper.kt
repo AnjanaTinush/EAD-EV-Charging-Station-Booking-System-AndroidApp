@@ -1,14 +1,17 @@
 package com.example.ev_syatem.database
 
+import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class DatabaseHelper(context: Context) :
+    SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "EVChargingStation.db"
-        private const val DATABASE_VERSION = 2 // Updated version
+        private const val DATABASE_VERSION = 2
 
         // User Table
         const val TABLE_USER = "users"
@@ -18,7 +21,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val COLUMN_EMAIL = "email"
         const val COLUMN_PHONE = "phone"
         const val COLUMN_PASSWORD = "password"
-        const val COLUMN_IS_ACTIVE = "is_active" // Changed from is_activate
+        const val COLUMN_IS_ACTIVE = "is_active"
         const val COLUMN_ROLE = "role"
         const val COLUMN_CREATED_AT_USER = "created_at"
         const val COLUMN_UPDATED_AT = "updated_at"
@@ -56,7 +59,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $COLUMN_DATE TEXT NOT NULL,
                 $COLUMN_TIME TEXT NOT NULL,
                 $COLUMN_STATUS TEXT NOT NULL,
-                $COLUMN_CREATED_AT INTEGER NOT NULL,
+                $COLUMN_CREATED_AT TEXT NOT NULL,
                 FOREIGN KEY ($COLUMN_USER_NIC) REFERENCES $TABLE_USER($COLUMN_NIC)
             )
         """
@@ -70,7 +73,57 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS $TABLE_RESERVATION")
         db.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
-
         onCreate(db)
+    }
+
+    // 🧩 Insert or replace logged-in user
+    fun insertUser(nic: String, fullName: String, email: String, phone: String, role: String, createdAt: String) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_NIC, nic)
+            put(COLUMN_FULL_NAME, fullName)
+            put(COLUMN_EMAIL, email)
+            put(COLUMN_PHONE, phone)
+            put(COLUMN_PASSWORD, "") // not storing actual password for security
+            put(COLUMN_IS_ACTIVE, 1)
+            put(COLUMN_ROLE, role)
+            put(COLUMN_CREATED_AT_USER, createdAt)
+        }
+        db.insertWithOnConflict(TABLE_USER, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        db.close()
+    }
+
+    // 🧩 Get user by NIC
+    fun getUserByNic(nic: String): Map<String, String>? {
+        val db = readableDatabase
+        val cursor: Cursor = db.query(
+            TABLE_USER,
+            null,
+            "$COLUMN_NIC = ?",
+            arrayOf(nic),
+            null,
+            null,
+            null
+        )
+
+        var user: Map<String, String>? = null
+        if (cursor.moveToFirst()) {
+            user = mapOf(
+                "nic" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NIC)),
+                "full_name" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FULL_NAME)),
+                "email" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)),
+                "phone" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PHONE)),
+                "role" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROLE))
+            )
+        }
+        cursor.close()
+        db.close()
+        return user
+    }
+
+    fun clearUsers() {
+        val db = writableDatabase
+        db.delete(TABLE_USER, null, null)
+        db.close()
     }
 }

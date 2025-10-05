@@ -1,96 +1,52 @@
 package com.example.ev_syatem
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.ev_syatem.repository.ReservationRepository
-import com.example.ev_syatem.repository.UserRepository
+import com.example.ev_syatem.database.DatabaseHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class HomeActivity : AppCompatActivity() {
-    private lateinit var userNameText: TextView
-    private lateinit var pendingCountText: TextView
-    private lateinit var approvedCountText: TextView
-    private lateinit var bookStationButton: LinearLayout
-    private lateinit var myReservationsButton: LinearLayout
-    private lateinit var bottomNavigation: BottomNavigationView
 
-    private lateinit var userRepository: UserRepository
-    private lateinit var reservationRepository: ReservationRepository
-    private var userNic: String = ""
+    private lateinit var userNameText: TextView
+    private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Set status bar to transparent for modern look
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
-
-        // Make status bar content dark (for light background)
-        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = true
-        }
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
 
         setContentView(R.layout.activity_home)
 
-        // Get user NIC from SharedPreferences or Intent
-        userNic = getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
-            .getString("USER_NIC", "") ?: ""
+        userNameText = findViewById(R.id.user_name_text)
+        bottomNavigation = findViewById(R.id.bottom_navigation)
+        dbHelper = DatabaseHelper(this)
 
-        if (userNic.isEmpty()) {
-            // No user logged in, redirect to login
-            navigateToLogin()
-            return
-        }
-
-        // Initialize repositories
-        userRepository = UserRepository(this)
-        reservationRepository = ReservationRepository(this)
-
-        initializeViews()
-        setupBottomNavigation()
         loadUserData()
-        loadReservationCounts()
-        setupClickListeners()
+        setupBottomNavigation()
     }
 
-    private fun initializeViews() {
-        try {
-            userNameText = findViewById(R.id.user_name_text)
-            pendingCountText = findViewById(R.id.pending_count_text)
-            approvedCountText = findViewById(R.id.approved_count_text)
-            bookStationButton = findViewById(R.id.book_station_button)
-            myReservationsButton = findViewById(R.id.my_reservations_button)
-            bottomNavigation = findViewById(R.id.bottom_navigation)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error initializing views: ${e.message}", Toast.LENGTH_LONG).show()
-            finish()
+    private fun loadUserData() {
+        val user = dbHelper.getUserByNic(dbHelper.getUserByNic("199811345678")?.get("nic") ?: "")
+        if (user != null) {
+            userNameText.text = "Welcome, ${user["full_name"]}"
+        } else {
+            Toast.makeText(this, "User not found!", Toast.LENGTH_SHORT).show()
+            navigateToLogin()
         }
     }
 
     private fun setupBottomNavigation() {
         bottomNavigation.selectedItemId = R.id.navigation_home
-
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.navigation_home -> {
-                    // Already on home, do nothing
-                    true
-                }
-                R.id.navigation_booking -> {
-                    Toast.makeText(this, "Booking feature coming soon!", Toast.LENGTH_SHORT).show()
-                    false
-                }
-                R.id.navigation_station -> {
-                    navigateToStationMap()
-                    true
-                }
+                R.id.navigation_home -> true
                 R.id.navigation_profile -> {
                     navigateToProfile()
                     true
@@ -98,75 +54,6 @@ class HomeActivity : AppCompatActivity() {
                 else -> false
             }
         }
-    }
-
-    private fun loadUserData() {
-        try {
-            val user = userRepository.getUserByNic(userNic)
-            if (user != null) {
-                userNameText.text = user.fullName
-            } else {
-                userNameText.text = "Guest User"
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error loading user data: ${e.message}", Toast.LENGTH_SHORT).show()
-            userNameText.text = "User"
-        }
-    }
-
-    private fun loadReservationCounts() {
-        try {
-            // Get pending reservations count
-            val pendingCount = reservationRepository.getPendingReservationsCount(userNic)
-
-            // Get approved future reservations count
-            val approvedCount = reservationRepository.getApprovedFutureReservationsCount(userNic)
-
-            // Use sample data if no real data exists (for demonstration)
-            val displayPendingCount = if (pendingCount == 0) 3 else pendingCount
-            val displayApprovedCount = if (approvedCount == 0) 5 else approvedCount
-
-            // Animate count updates for better UX
-            animateCount(pendingCountText, 0, displayPendingCount)
-            animateCount(approvedCountText, 0, displayApprovedCount)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error loading reservations: ${e.message}", Toast.LENGTH_SHORT).show()
-            // Show sample data on error for demonstration
-            animateCount(pendingCountText, 0, 3)
-            animateCount(approvedCountText, 0, 5)
-        }
-    }
-
-    private fun animateCount(textView: TextView, start: Int, end: Int) {
-        val animator = android.animation.ValueAnimator.ofInt(start, end)
-        animator.duration = 1000 // 1 second animation
-        animator.addUpdateListener { animation ->
-            textView.text = animation.animatedValue.toString()
-        }
-        animator.start()
-    }
-
-    private fun setupClickListeners() {
-        bookStationButton.setOnClickListener {
-            // TODO: Navigate to book station screen
-            Toast.makeText(this, "Book Station feature coming soon!", Toast.LENGTH_SHORT).show()
-        }
-
-        myReservationsButton.setOnClickListener {
-            // TODO: Navigate to my reservations screen
-            Toast.makeText(this, "My Reservations feature coming soon!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun logout() {
-        // Clear user session
-        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
-            .edit()
-            .remove("USER_NIC")
-            .apply()
-
-        // Navigate to login
-        navigateToLogin()
     }
 
     private fun navigateToLogin() {
@@ -179,20 +66,5 @@ class HomeActivity : AppCompatActivity() {
     private fun navigateToProfile() {
         val intent = Intent(this, ProfileActivity::class.java)
         startActivity(intent)
-        finish()
-    }
-
-    private fun navigateToStationMap() {
-        val intent = Intent(this, StationMapActivity::class.java)
-        startActivity(intent)
-        finish()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Refresh counts when returning to this screen
-        if (userNic.isNotEmpty()) {
-            loadReservationCounts()
-        }
     }
 }
