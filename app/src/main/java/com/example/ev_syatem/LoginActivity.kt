@@ -10,6 +10,15 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.repository.UserRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 class LoginActivity : AppCompatActivity() {
 
@@ -21,21 +30,13 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Ensure no action bar is shown
         supportActionBar?.hide()
 
-        // Set status bar color to match green header
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green_dark)
-
-        // Make status bar content light (for dark background)
-        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = false
-        }
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
 
         setContentView(R.layout.activity_login)
-
         userRepository = UserRepository(this)
 
         initializeViews()
@@ -51,15 +52,10 @@ class LoginActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         loginButton.setOnClickListener {
-            if (validateLoginForm()) {
-                performLogin()
-            }
+            if (validateLoginForm()) performLogin()
         }
-
         registerLink.setOnClickListener {
-            // Navigate to registration activity
-            val intent = Intent(this, RegisterActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, RegisterActivity::class.java))
         }
     }
 
@@ -67,24 +63,18 @@ class LoginActivity : AppCompatActivity() {
         val nic = nicInput.text.toString().trim()
         val password = passwordInput.text.toString()
 
-        // Reset errors
         nicInput.error = null
         passwordInput.error = null
 
         var isValid = true
-
-        // Validate NIC
         if (nic.isEmpty()) {
             nicInput.error = "NIC is required"
             isValid = false
         }
-
-        // Validate Password
         if (password.isEmpty()) {
             passwordInput.error = "Password is required"
             isValid = false
         }
-
         return isValid
     }
 
@@ -92,34 +82,62 @@ class LoginActivity : AppCompatActivity() {
         val nic = nicInput.text.toString().trim()
         val password = passwordInput.text.toString()
 
-        // Authenticate user from local database
-        val user = userRepository.loginUser(nic, password)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient()
 
-        if (user != null) {
-            // Check if user account is activated
-            if (!user.isActive) {
-                Toast.makeText(this, "Your account is pending activation. Please contact admin.", Toast.LENGTH_LONG).show()
-                return
+                val jsonBody = JSONObject()
+                jsonBody.put("nic", nic)
+                jsonBody.put("password", password)
+
+                val requestBody = jsonBody.toString()
+                    .toRequestBody("application/json".toMediaType())
+
+                // --- IMPORTANT: use 10.0.2.2 for emulator to reach host IIS ---
+                val request = Request.Builder()
+                    .url("http://10.0.2.2:8080/api/mobileauth/login")
+                    .post(requestBody)
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val responseBody = response.body?.string() ?: ""
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            this@LoginActivity,
+                            "Login successful!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        getSharedPreferences("EV_PREFS", MODE_PRIVATE)
+                            .edit()
+                            .putString("USER_NIC", nic)
+                            .apply()
+
+                        val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        Toast.makeText(
+                            this@LoginActivity,
+                            "Invalid NIC or password. Server returned ${response.code}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        passwordInput.error = "Invalid credentials"
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Login failed: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
-
-            // Login successful
-            Toast.makeText(this, "Welcome back, ${user.fullName}!", Toast.LENGTH_SHORT).show()
-
-            // Save user session
-            getSharedPreferences("EV_PREFS", MODE_PRIVATE)
-                .edit()
-                .putString("USER_NIC", nic)
-                .apply()
-
-            // Navigate to home
-            val intent = Intent(this, HomeActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        } else {
-            // Login failed
-            Toast.makeText(this, "Invalid NIC or password. Please try again.", Toast.LENGTH_LONG).show()
-            passwordInput.error = "Invalid credentials"
         }
     }
 }
