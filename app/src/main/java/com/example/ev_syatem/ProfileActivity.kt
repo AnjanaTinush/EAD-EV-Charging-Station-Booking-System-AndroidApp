@@ -8,10 +8,19 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.ev_syatem.repository.UserRepository
+import com.example.ev_syatem.database.DatabaseHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -26,33 +35,33 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var deactivateAccountButton: MaterialButton
     private lateinit var bottomNavigation: BottomNavigationView
 
-    private lateinit var userRepository: UserRepository
+    private lateinit var dbHelper: DatabaseHelper
     private var userNic: String = ""
+    private var userId: String = ""   // 🔹 actual MongoDB ID (we’ll load from local user data if stored)
     private var isEditMode: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set status bar to transparent for modern look
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
-        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = true
-        }
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
 
         setContentView(R.layout.activity_profile)
 
-        // Get user NIC from SharedPreferences
-        userNic = getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
-            .getString("USER_NIC", "") ?: ""
+        dbHelper = DatabaseHelper(this)
 
-        if (userNic.isEmpty()) {
+        val user = dbHelper.getLatestUser()
+        if (user != null) {
+            userNic = user["nic"] ?: ""
+            profileNameText = findViewById(R.id.profile_name_text)
+            profileNicText = findViewById(R.id.profile_nic_text)
+            profileNameText.text = user["full_name"]
+            profileNicText.text = user["nic"]
+        } else {
             navigateToLogin()
             return
         }
-
-        // Initialize repository
-        userRepository = UserRepository(this)
 
         initializeViews()
         setupBottomNavigation()
@@ -61,8 +70,6 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun initializeViews() {
-        profileNameText = findViewById(R.id.profile_name_text)
-        profileNicText = findViewById(R.id.profile_nic_text)
         fullNameInput = findViewById(R.id.fullNameInput)
         emailInput = findViewById(R.id.emailInput)
         phoneInput = findViewById(R.id.phoneInput)
@@ -72,30 +79,18 @@ class ProfileActivity : AppCompatActivity() {
         deactivateAccountButton = findViewById(R.id.deactivate_account_button)
         bottomNavigation = findViewById(R.id.bottom_navigation)
 
-        // Initially disable editing
         setEditMode(false)
     }
 
     private fun setupBottomNavigation() {
         bottomNavigation.selectedItemId = R.id.navigation_profile
-
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_home -> {
-                    navigateToHome()
-                    true
-                }
-                R.id.navigation_booking -> {
-                    Toast.makeText(this, "Booking feature coming soon!", Toast.LENGTH_SHORT).show()
-                    false
+                    navigateToHome(); true
                 }
                 R.id.navigation_station -> {
-                    navigateToStationMap()
-                    true
-                }
-                R.id.navigation_profile -> {
-                    // Already on profile
-                    true
+                    navigateToStationMap(); true
                 }
                 else -> false
             }
@@ -103,74 +98,129 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun loadUserData() {
-        try {
-            val user = userRepository.getUserByNic(userNic)
-            if (user != null) {
-                profileNameText.text = user.fullName
-                profileNicText.text = user.nic
-                fullNameInput.setText(user.fullName)
-                emailInput.setText(user.email)
-                phoneInput.setText(user.phone)
-            } else {
-                Toast.makeText(this, "User data not found", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error loading user data: ${e.message}", Toast.LENGTH_SHORT).show()
+        val user = dbHelper.getUserByNic(userNic)
+        if (user != null) {
+            fullNameInput.setText(user["full_name"])
+            emailInput.setText(user["email"])
+            phoneInput.setText(user["phone"])
         }
     }
 
     private fun setupClickListeners() {
-        editToggleButton.setOnClickListener {
-            toggleEditMode()
-        }
+        editToggleButton.setOnClickListener { toggleEditMode() }
 
         saveProfileButton.setOnClickListener {
             if (validateForm()) {
-                saveProfile()
+                updateUserProfile()
             }
         }
 
-        logoutButton.setOnClickListener {
-            showLogoutConfirmationDialog()
-        }
+        logoutButton.setOnClickListener { logout() }
 
+        // 🔹 NEW: Deactivate account confirmation + API call
         deactivateAccountButton.setOnClickListener {
             showDeactivateConfirmationDialog()
         }
     }
 
-    private fun showLogoutConfirmationDialog() {
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Logout")
-            .setMessage("Are you sure you want to logout?")
-            .setPositiveButton("Logout") { dialog, _ ->
-                logout()
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setCancelable(true)
-            .show()
+    private fun validateForm(): Boolean {
+        val name = fullNameInput.text.toString().trim()
+        val email = emailInput.text.toString().trim()
+        val phone = phoneInput.text.toString().trim()
+
+        fullNameInput.error = null
+        emailInput.error = null
+        phoneInput.error = null
+
+        if (name.isEmpty()) {
+            fullNameInput.error = "Full name required"; return false
+        }
+        if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailInput.error = "Invalid email"; return false
+        }
+        if (phone.isEmpty() || phone.length < 10) {
+            phoneInput.error = "Invalid phone"; return false
+        }
+        return true
     }
 
-    private fun logout() {
-        // Clear user session
-        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
-            .edit()
-            .remove("USER_NIC")
-            .apply()
+    private fun updateUserProfile() {
+        val username = fullNameInput.text.toString().trim()
+        val email = emailInput.text.toString().trim()
+        val phone = phoneInput.text.toString().trim()
 
-        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+        saveProfileButton.isEnabled = false
+        saveProfileButton.text = "Saving..."
 
-        // Navigate to login
-        navigateToLogin()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient()
+
+                val jsonBody = JSONObject().apply {
+                    put("username", username)
+                    put("email", email)
+                    put("phone", phone)
+                    put("nic", userNic)
+                }
+
+                val requestBody = jsonBody.toString()
+                    .toRequestBody("application/json".toMediaType())
+
+                val request = Request.Builder()
+                    .url("http://10.0.2.2:7179/api/users/$userNic") // backend PUT endpoint
+                    .put(requestBody)
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val body = response.body?.string() ?: ""
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        dbHelper.insertUser(
+                            userNic,
+                            username,
+                            email,
+                            phone,
+                            "EvOwner",
+                            System.currentTimeMillis().toString()
+                        )
+
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Profile updated successfully!",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        setEditMode(false)
+                    } else {
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Failed: ${body.ifEmpty { "Unknown error" }}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    saveProfileButton.isEnabled = true
+                    saveProfileButton.text = "Save Changes"
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    saveProfileButton.isEnabled = true
+                    saveProfileButton.text = "Save Changes"
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.localizedMessage}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     }
 
+    // 🔹 NEW FUNCTION — show dialog before deactivating
     private fun showDeactivateConfirmationDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Deactivate Account")
-            .setMessage("Are you sure you want to deactivate your account? You will be logged out and won't be able to login until your account is reactivated by an administrator.")
+            .setMessage("Are you sure you want to deactivate your account? You will be logged out and cannot log in until reactivated by admin.")
             .setPositiveButton("Deactivate") { dialog, _ ->
                 deactivateAccount()
                 dialog.dismiss()
@@ -182,27 +232,54 @@ class ProfileActivity : AppCompatActivity() {
             .show()
     }
 
+    // 🔹 NEW FUNCTION — call backend PATCH API
     private fun deactivateAccount() {
-        try {
-            // Update user's isActivate status to false
-            val result = userRepository.updateUserActivation(userNic, false)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient()
 
-            if (result > 0) {
-                Toast.makeText(this, "Account deactivated successfully", Toast.LENGTH_LONG).show()
+                val request = Request.Builder()
+                    // 👇 For Android emulator use 10.0.2.2 instead of localhost
+                    .url("http://10.0.2.2:8080/api/users/$userNic/deactivate")
+                    .patch("".toRequestBody("application/json".toMediaType()))
+                    .build()
 
-                // Clear user session
-                getSharedPreferences("EV_PREFS", MODE_PRIVATE)
-                    .edit()
-                    .remove("USER_NIC")
-                    .apply()
+                val response = client.newCall(request).execute()
+                val responseBody = response.body?.string() ?: ""
 
-                // Navigate to login
-                navigateToLogin()
-            } else {
-                Toast.makeText(this, "Failed to deactivate account. Please try again.", Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Account deactivated successfully.",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        // ✅ Clear session
+                        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
+                            .edit()
+                            .remove("USER_NIC")
+                            .apply()
+
+                        // ✅ Redirect to Login
+                        navigateToLogin()
+                    } else {
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Failed: ${responseBody.ifEmpty { "Unknown error" }}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.localizedMessage}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -213,131 +290,31 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun setEditMode(enabled: Boolean) {
         isEditMode = enabled
-
-        // Enable/disable input fields
         fullNameInput.isEnabled = enabled
         emailInput.isEnabled = enabled
         phoneInput.isEnabled = enabled
 
-        // Change button appearance and visibility
         if (enabled) {
             editToggleButton.text = "Cancel"
-            editToggleButton.setIconResource(android.R.drawable.ic_menu_close_clear_cancel)
             saveProfileButton.visibility = android.view.View.VISIBLE
         } else {
             editToggleButton.text = "Edit"
-            editToggleButton.setIconResource(R.drawable.ic_edit)
             saveProfileButton.visibility = android.view.View.GONE
-            // Reload data to reset any unsaved changes
             loadUserData()
         }
     }
 
-    private fun validateForm(): Boolean {
-        val fullName = fullNameInput.text.toString().trim()
-        val email = emailInput.text.toString().trim()
-        val phone = phoneInput.text.toString().trim()
-
-        // Reset errors
-        fullNameInput.error = null
-        emailInput.error = null
-        phoneInput.error = null
-
-        var isValid = true
-
-        // Validate Full Name
-        if (fullName.isEmpty()) {
-            fullNameInput.error = "Full name is required"
-            isValid = false
-        } else if (fullName.length < 2) {
-            fullNameInput.error = "Full name must be at least 2 characters"
-            isValid = false
-        }
-
-        // Validate Email
-        if (email.isEmpty()) {
-            emailInput.error = "Email is required"
-            isValid = false
-        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailInput.error = "Please enter a valid email address"
-            isValid = false
-        }
-
-        // Validate Phone
-        if (phone.isEmpty()) {
-            phoneInput.error = "Phone number is required"
-            isValid = false
-        } else if (phone.length < 10) {
-            phoneInput.error = "Phone number must be at least 10 digits"
-            isValid = false
-        }
-
-        return isValid
-    }
-
-    private fun saveProfile() {
-        val fullName = fullNameInput.text.toString().trim()
-        val email = emailInput.text.toString().trim()
-        val phone = phoneInput.text.toString().trim()
-
-        // Disable save button during save
-        saveProfileButton.isEnabled = false
-        saveProfileButton.text = "Saving..."
-
-        try {
-            // Check if email is being changed and if it already exists for another user
-            val currentUser = userRepository.getUserByNic(userNic)
-            if (currentUser != null && email != currentUser.email) {
-                if (userRepository.isEmailExists(email)) {
-                    emailInput.error = "This email is already in use"
-                    Toast.makeText(this, "Email already exists", Toast.LENGTH_LONG).show()
-                    // Re-enable button
-                    saveProfileButton.isEnabled = true
-                    saveProfileButton.text = "Save Changes"
-                    return
-                }
-            }
-
-            // Update user in database
-            val updatedUser = currentUser?.copy(
-                fullName = fullName,
-                email = email,
-                phone = phone
-            )
-
-            if (updatedUser != null) {
-                val result = userRepository.updateUser(updatedUser)
-                if (result > 0) {
-                    // Success feedback
-                    saveProfileButton.text = "✓ Saved!"
-                    Toast.makeText(this, "✓ Profile updated successfully!", Toast.LENGTH_LONG).show()
-
-                    // Exit edit mode after delay
-                    saveProfileButton.postDelayed({
-                        setEditMode(false)
-                        saveProfileButton.isEnabled = true
-                        saveProfileButton.text = "Save Changes"
-                    }, 1500)
-                } else {
-                    Toast.makeText(this, "Failed to update profile. Please try again.", Toast.LENGTH_LONG).show()
-                    saveProfileButton.isEnabled = true
-                    saveProfileButton.text = "Save Changes"
-                }
-            } else {
-                Toast.makeText(this, "User data not found", Toast.LENGTH_SHORT).show()
-                saveProfileButton.isEnabled = true
-                saveProfileButton.text = "Save Changes"
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-            saveProfileButton.isEnabled = true
-            saveProfileButton.text = "Save Changes"
-        }
+    private fun logout() {
+        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
+            .edit()
+            .remove("USER_NIC")
+            .apply()
+        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+        navigateToLogin()
     }
 
     private fun navigateToHome() {
-        val intent = Intent(this, HomeActivity::class.java)
-        startActivity(intent)
+        startActivity(Intent(this, HomeActivity::class.java))
         finish()
     }
 
@@ -349,8 +326,7 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun navigateToStationMap() {
-        val intent = Intent(this, StationMapActivity::class.java)
-        startActivity(intent)
+        startActivity(Intent(this, StationMapActivity::class.java))
         finish()
     }
 }
