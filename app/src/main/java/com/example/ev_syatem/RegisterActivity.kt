@@ -144,7 +144,7 @@ class RegisterActivity : AppCompatActivity() {
         // ✅ Always include default role = "EvOwner"
         val jsonBody = JSONObject().apply {
             put("nic", nic)
-            put("fullName", fullName)
+            put("username", fullName)
             put("email", email)
             put("phone", phone)
             put("password", password)
