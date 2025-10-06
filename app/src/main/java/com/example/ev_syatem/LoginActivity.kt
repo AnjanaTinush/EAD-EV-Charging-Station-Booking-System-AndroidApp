@@ -8,7 +8,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.database.DatabaseHelper
-import com.example.ev_syatem.repository.UserRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.CoroutineScope
@@ -33,13 +32,14 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // ✅ Setup immersive UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green_dark)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
 
         setContentView(R.layout.activity_login)
-        dbHelper = DatabaseHelper(this)
 
+        dbHelper = DatabaseHelper(this)
         initializeViews()
         setupClickListeners()
     }
@@ -53,8 +53,11 @@ class LoginActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         loginButton.setOnClickListener {
-            if (validateLoginForm()) performLogin()
+            if (validateLoginForm()) {
+                performLogin()
+            }
         }
+
         registerLink.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
@@ -86,14 +89,17 @@ class LoginActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
+
                 val jsonBody = JSONObject().apply {
                     put("nic", nic)
                     put("password", password)
                 }
 
                 val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
+
+                // ✅ Correct API endpoint for mobile login (IIS hosted)
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:8080/api/mobileauth/login")
+                    .url("http://10.0.2.2:8080/api/auth/login?platform=mobile")
                     .post(requestBody)
                     .build()
 
@@ -103,38 +109,60 @@ class LoginActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         val jsonResponse = JSONObject(responseBody)
-                        val user = jsonResponse.getJSONObject("user")
+                        val userObj = jsonResponse.optJSONObject("user")
 
-                        val nicRes = user.getString("nic")
-                        val fullName = user.getString("username")
-                        val email = user.getString("email")
-                        val phone = user.getString("phone")
-                        val role = user.getString("role")
-                        val createdAt = user.getString("createdAt")
+                        if (userObj != null) {
+                            val id = userObj.optString("id", "")
+                            val username = userObj.optString("username", "")
+                            val email = userObj.optString("email", "")
+                            val phone = userObj.optString("phone", "")
+                            val role = userObj.optString("role", "")
 
-                        // Save to SQLite
-                        dbHelper.clearUsers()
-                        dbHelper.insertUser(nicRes, fullName, email, phone, role, createdAt)
+                            // ✅ Store minimal user info locally (ID, username, role)
+                            dbHelper.clearUsers()
+                            dbHelper.insertUser(
+                                id,               // Using id as NIC (since NIC column expects unique ID)
+                                username,         // full name field reused for username
+                                email,
+                                phone,
+                                role,
+                                System.currentTimeMillis().toString()
+                            )
 
-                        Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Welcome, $username!",
+                                Toast.LENGTH_LONG
+                            ).show()
 
-                        val intent = Intent(this@LoginActivity, HomeActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-                        finish()
+                            // ✅ Navigate to HomeActivity
+                            val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
+                            finish()
+                        } else {
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Invalid server response.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     } else {
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "Invalid credentials (${response.code})",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        val msg = try {
+                            val errorJson = JSONObject(responseBody)
+                            errorJson.optString("message", "Invalid credentials")
+                        } catch (_: Exception) {
+                            "Invalid credentials"
+                        }
+
+                        Toast.makeText(this@LoginActivity, msg, Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@LoginActivity,
-                        "Login failed: ${e.message}",
+                        "Login failed: ${e.localizedMessage}",
                         Toast.LENGTH_LONG
                     ).show()
                 }

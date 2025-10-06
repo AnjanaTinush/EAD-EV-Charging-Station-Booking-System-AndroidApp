@@ -7,10 +7,17 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.ev_syatem.data.User
-import com.example.ev_syatem.repository.UserRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -19,29 +26,22 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var emailInput: TextInputEditText
     private lateinit var phoneInput: TextInputEditText
     private lateinit var passwordInput: TextInputEditText
+    private lateinit var confirmPasswordInput: TextInputEditText
     private lateinit var registerButton: MaterialButton
     private lateinit var loginLink: TextView
-    private lateinit var userRepository: UserRepository
+
+    private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Ensure no action bar is shown
         supportActionBar?.hide()
 
-        // Set status bar color to match green header
+        // ✅ Setup system UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green)
-
-        // Make status bar content light (for dark background)
-        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = false
-        }
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
 
         setContentView(R.layout.activity_register)
-
-        // Initialize repository
-        userRepository = UserRepository(this)
 
         initializeViews()
         setupClickListeners()
@@ -53,6 +53,7 @@ class RegisterActivity : AppCompatActivity() {
         emailInput = findViewById(R.id.email_input)
         phoneInput = findViewById(R.id.phone_input)
         passwordInput = findViewById(R.id.password_input)
+        confirmPasswordInput = findViewById(R.id.confirm_password_input)
         registerButton = findViewById(R.id.register_button)
         loginLink = findViewById(R.id.login_link)
     }
@@ -65,7 +66,6 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         loginLink.setOnClickListener {
-            // Navigate back to login
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
             finish()
@@ -78,17 +78,17 @@ class RegisterActivity : AppCompatActivity() {
         val email = emailInput.text.toString().trim()
         val phone = phoneInput.text.toString().trim()
         val password = passwordInput.text.toString()
+        val confirmPassword = confirmPasswordInput.text.toString()
 
-        // Reset errors
         nicInput.error = null
         fullNameInput.error = null
         emailInput.error = null
         phoneInput.error = null
         passwordInput.error = null
+        confirmPasswordInput.error = null
 
         var isValid = true
 
-        // Validate NIC
         if (nic.isEmpty()) {
             nicInput.error = "NIC is required"
             isValid = false
@@ -97,34 +97,24 @@ class RegisterActivity : AppCompatActivity() {
             isValid = false
         }
 
-        // Validate Full Name
         if (fullName.isEmpty()) {
             fullNameInput.error = "Full name is required"
             isValid = false
-        } else if (fullName.length < 2) {
-            fullNameInput.error = "Full name must be at least 2 characters"
-            isValid = false
         }
 
-        // Validate Email
         if (email.isEmpty()) {
             emailInput.error = "Email is required"
             isValid = false
         } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailInput.error = "Please enter a valid email address"
+            emailInput.error = "Invalid email address"
             isValid = false
         }
 
-        // Validate Phone
         if (phone.isEmpty()) {
-            phoneInput.error = "Phone number is required"
-            isValid = false
-        } else if (phone.length < 10) {
-            phoneInput.error = "Phone number must be at least 10 digits"
+            phoneInput.error = "Phone is required"
             isValid = false
         }
 
-        // Validate Password
         if (password.isEmpty()) {
             passwordInput.error = "Password is required"
             isValid = false
@@ -133,54 +123,82 @@ class RegisterActivity : AppCompatActivity() {
             isValid = false
         }
 
+        if (confirmPassword.isEmpty()) {
+            confirmPasswordInput.error = "Confirm your password"
+            isValid = false
+        } else if (password != confirmPassword) {
+            confirmPasswordInput.error = "Passwords do not match"
+            isValid = false
+        }
+
         return isValid
     }
 
     private fun registerUser() {
-        // Get form data
         val nic = nicInput.text.toString().trim()
         val fullName = fullNameInput.text.toString().trim()
         val email = emailInput.text.toString().trim()
         val phone = phoneInput.text.toString().trim()
         val password = passwordInput.text.toString()
 
-        // Check if NIC already exists
-        if (userRepository.isNicExists(nic)) {
-            nicInput.error = "This NIC is already registered"
-            Toast.makeText(this, "NIC already exists. Please use a different NIC.", Toast.LENGTH_LONG).show()
-            return
+        // ✅ Always include default role = "EvOwner"
+        val jsonBody = JSONObject().apply {
+            put("nic", nic)
+            put("username", fullName)
+            put("email", email)
+            put("phone", phone)
+            put("password", password)
+            put("role", "EvOwner")
         }
 
-        // Check if email already exists
-        if (userRepository.isEmailExists(email)) {
-            emailInput.error = "This email is already registered"
-            Toast.makeText(this, "Email already exists. Please use a different email.", Toast.LENGTH_LONG).show()
-            return
-        }
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = jsonBody.toString().toRequestBody(mediaType)
 
-        // Create User object with isActive = true (automatically activated)
-        val user = User(
-            nic = nic,
-            fullName = fullName,
-            email = email,
-            phone = phone,
-            password = password,
-            isActive = true  // Automatically activate new accounts
-        )
+        val request = Request.Builder()
+            .url("http://10.0.2.2:8080/api/auth/register") // ✅ Correct API endpoint
+            .post(requestBody)
+            .build()
 
-        // Register user in local database
-        val result = userRepository.registerUser(user)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = client.newCall(request).execute()
+                val responseBody = response.body?.string()
 
-        if (result > 0) {
-            Toast.makeText(this, "Registration successful! Please login with your credentials.", Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "Registration successful! Please log in.",
+                            Toast.LENGTH_LONG
+                        ).show()
 
-            // Navigate to login page
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        } else {
-            Toast.makeText(this, "Registration failed. Please try again.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        val message = try {
+                            val errorJson = JSONObject(responseBody ?: "")
+                            errorJson.optString("message", "Registration failed")
+                        } catch (_: Exception) {
+                            responseBody ?: "Registration failed"
+                        }
+
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "Failed: $message",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@RegisterActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
 }

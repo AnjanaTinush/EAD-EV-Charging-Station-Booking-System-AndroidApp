@@ -33,11 +33,11 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun loadUserData() {
-        val user = dbHelper.getUserByNic(dbHelper.getUserByNic("199811345678")?.get("nic") ?: "")
+        val user = dbHelper.getLatestUser()
         if (user != null) {
             userNameText.text = "Welcome, ${user["full_name"]}"
         } else {
-            Toast.makeText(this, "User not found!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please log in again", Toast.LENGTH_SHORT).show()
             navigateToLogin()
         }
     }
