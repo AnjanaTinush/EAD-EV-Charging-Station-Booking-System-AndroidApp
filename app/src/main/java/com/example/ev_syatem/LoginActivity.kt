@@ -117,6 +117,17 @@ class LoginActivity : AppCompatActivity() {
                             val email = userObj.optString("email", "")
                             val phone = userObj.optString("phone", "")
                             val role = userObj.optString("role", "")
+                            val isActive = userObj.optBoolean("isActive", true) // ✅ added
+
+                            // ✅ Check if account is deactivated
+                            if (!isActive) {
+                                Toast.makeText(
+                                    this@LoginActivity,
+                                    "Your account is deactivated. Please contact admin.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                return@withContext
+                            }
 
                             // ✅ Store minimal user info locally (ID, username, role)
                             dbHelper.clearUsers()
