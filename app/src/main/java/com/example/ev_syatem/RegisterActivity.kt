@@ -36,6 +36,7 @@ class RegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // ✅ Setup system UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
@@ -52,7 +53,7 @@ class RegisterActivity : AppCompatActivity() {
         emailInput = findViewById(R.id.email_input)
         phoneInput = findViewById(R.id.phone_input)
         passwordInput = findViewById(R.id.password_input)
-        confirmPasswordInput = findViewById(R.id.confirm_password_input) // new field
+        confirmPasswordInput = findViewById(R.id.confirm_password_input)
         registerButton = findViewById(R.id.register_button)
         loginLink = findViewById(R.id.login_link)
     }
@@ -140,40 +141,51 @@ class RegisterActivity : AppCompatActivity() {
         val phone = phoneInput.text.toString().trim()
         val password = passwordInput.text.toString()
 
+        // ✅ Always include default role = "EvOwner"
         val jsonBody = JSONObject().apply {
             put("nic", nic)
             put("fullName", fullName)
             put("email", email)
             put("phone", phone)
             put("password", password)
+            put("role", "EvOwner")
         }
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val requestBody = jsonBody.toString().toRequestBody(mediaType)
 
         val request = Request.Builder()
-            .url("http://10.0.2.2:8080/api/EVOwner") // use 10.0.2.2 for Android emulator
+            .url("http://10.0.2.2:8080/api/auth/register") // ✅ Correct API endpoint
             .post(requestBody)
             .build()
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = client.newCall(request).execute()
+                val responseBody = response.body?.string()
+
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         Toast.makeText(
                             this@RegisterActivity,
-                            "Registration successful! Please login.",
+                            "Registration successful! Please log in.",
                             Toast.LENGTH_LONG
                         ).show()
+
                         val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
                         startActivity(intent)
                         finish()
                     } else {
-                        val errorBody = response.body?.string()
+                        val message = try {
+                            val errorJson = JSONObject(responseBody ?: "")
+                            errorJson.optString("message", "Registration failed")
+                        } catch (_: Exception) {
+                            responseBody ?: "Registration failed"
+                        }
+
                         Toast.makeText(
                             this@RegisterActivity,
-                            "Failed: $errorBody",
+                            "Failed: $message",
                             Toast.LENGTH_LONG
                         ).show()
                     }

@@ -32,7 +32,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // Setup system UI
+        // ✅ Setup immersive UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green_dark)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
@@ -95,12 +95,11 @@ class LoginActivity : AppCompatActivity() {
                     put("password", password)
                 }
 
-                val requestBody = jsonBody.toString()
-                    .toRequestBody("application/json".toMediaType())
+                val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
 
-                // Use 10.0.2.2 for emulator access to localhost
+                // ✅ Correct API endpoint for mobile login (IIS hosted)
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:8080/api/mobileauth/login")
+                    .url("http://10.0.2.2:8080/api/auth/login?platform=mobile")
                     .post(requestBody)
                     .build()
 
@@ -110,49 +109,44 @@ class LoginActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         val jsonResponse = JSONObject(responseBody)
-                        val userObj = jsonResponse.getJSONObject("user")
+                        val userObj = jsonResponse.optJSONObject("user")
 
-                        // Identify user type (EVOwner or StationOperator)
-                        val userType = userObj.optString("type", "Unknown")
+                        if (userObj != null) {
+                            val id = userObj.optString("id", "")
+                            val username = userObj.optString("username", "")
+                            val email = userObj.optString("email", "")
+                            val phone = userObj.optString("phone", "")
+                            val role = userObj.optString("role", "")
 
-                        // Extract common fields safely
-                        val nicRes = userObj.optString("nic", "")
-                        val email = userObj.optString("email", "")
-                        val phone = userObj.optString("phone", "")
-                        val isActive = userObj.optBoolean("isActive", true)
+                            // ✅ Store minimal user info locally (ID, username, role)
+                            dbHelper.clearUsers()
+                            dbHelper.insertUser(
+                                id,               // Using id as NIC (since NIC column expects unique ID)
+                                username,         // full name field reused for username
+                                email,
+                                phone,
+                                role,
+                                System.currentTimeMillis().toString()
+                            )
 
-                        // Role/Name fields based on user type
-                        val fullNameOrUsername = when (userType) {
-                            "EVOwner" -> userObj.optString("fullName", "")
-                            "StationOperator" -> userObj.optString("username", "")
-                            else -> ""
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Welcome, $username!",
+                                Toast.LENGTH_LONG
+                            ).show()
+
+                            // ✅ Navigate to HomeActivity
+                            val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
+                            finish()
+                        } else {
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Invalid server response.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-
-                        val role = userObj.optString("role", userType)
-                        val createdAt = jsonResponse.optString("createdAt", "")
-
-                        // ✅ Save user locally
-                        dbHelper.clearUsers()
-                        dbHelper.insertUser(
-                            nicRes,
-                            fullNameOrUsername,
-                            email,
-                            phone,
-                            role,
-                            createdAt
-                        )
-
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "Welcome back, $fullNameOrUsername!",
-                            Toast.LENGTH_LONG
-                        ).show()
-
-                        // ✅ Navigate to Home screen
-                        val intent = Intent(this@LoginActivity, HomeActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-                        finish()
                     } else {
                         val msg = try {
                             val errorJson = JSONObject(responseBody)
@@ -161,11 +155,7 @@ class LoginActivity : AppCompatActivity() {
                             "Invalid credentials"
                         }
 
-                        Toast.makeText(
-                            this@LoginActivity,
-                            msg,
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Toast.makeText(this@LoginActivity, msg, Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
