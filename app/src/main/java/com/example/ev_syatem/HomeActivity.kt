@@ -52,6 +52,7 @@ class HomeActivity : AppCompatActivity() {
     private fun setupBottomNavigation() {
         bottomNavigation.selectedItemId = R.id.navigation_home
         bottomNavigation.setOnItemSelectedListener { item ->
+
             when (item.itemId) {
                 R.id.navigation_home -> true
                 R.id.navigation_profile -> {
