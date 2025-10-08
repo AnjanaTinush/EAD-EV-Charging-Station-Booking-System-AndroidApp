@@ -2,6 +2,7 @@ package com.example.ev_syatem
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,12 @@ class HomeActivity : AppCompatActivity() {
 
         loadUserData()
         setupBottomNavigation()
+
+        // ✅ Add listener for Book Charging Station button
+        val bookStationButton: LinearLayout = findViewById(R.id.book_station_button)
+        bookStationButton.setOnClickListener {
+            navigateToBooking()
+        }
     }
 
     private fun loadUserData() {
@@ -65,6 +72,12 @@ class HomeActivity : AppCompatActivity() {
 
     private fun navigateToProfile() {
         val intent = Intent(this, ProfileActivity::class.java)
+        startActivity(intent)
+    }
+
+    // ✅ Booking navigation
+    private fun navigateToBooking() {
+        val intent = Intent(this, BookingActivity::class.java)
         startActivity(intent)
     }
 }
