@@ -1,20 +1,30 @@
 package com.example.ev_syatem
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.data.Booking
+import com.example.ev_syatem.data.Station
 import com.example.ev_syatem.repository.BookingRepository
+import java.text.SimpleDateFormat
+import java.util.*
 
 class BookingActivity : AppCompatActivity() {
 
     private lateinit var etOwnerNIC: EditText
-    private lateinit var etStationId: EditText
-    private lateinit var etReservationTime: EditText
+    private lateinit var spinnerStation: Spinner
+    private lateinit var tvDate: TextView
+    private lateinit var tvTime: TextView
     private lateinit var btnCreateBooking: Button
+
     private val bookingRepository = BookingRepository()
+    private val stations = mutableListOf<Station>()
+    private var selectedStationId: String? = null
+    private var selectedDateTime: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,27 +35,120 @@ class BookingActivity : AppCompatActivity() {
         setContentView(R.layout.activity_booking)
 
         etOwnerNIC = findViewById(R.id.et_owner_nic)
-        etStationId = findViewById(R.id.et_station_id)
-        etReservationTime = findViewById(R.id.et_reservation_time)
+        spinnerStation = findViewById(R.id.spinner_station)
+        tvDate = findViewById(R.id.tv_date)
+        tvTime = findViewById(R.id.tv_time)
         btnCreateBooking = findViewById(R.id.btn_create_booking)
 
-        btnCreateBooking.setOnClickListener {
-            val ownerNIC = etOwnerNIC.text.toString().trim()
-            val stationId = etStationId.text.toString().trim()
-            val reservationTime = etReservationTime.text.toString().trim()
+        setupListeners()
+        loadActiveStations()
+    }
 
-            if (ownerNIC.isEmpty() || stationId.isEmpty() || reservationTime.isEmpty()) {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+    private fun setupListeners() {
+        tvDate.setOnClickListener { showDatePicker() }
+        tvTime.setOnClickListener { showTimePicker() }
+
+        btnCreateBooking.setOnClickListener {
+            val nic = etOwnerNIC.text.toString().trim()
+            if (nic.length !in 10..12) {
+                Toast.makeText(this, "NIC must be 10–12 characters", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val booking = Booking(ownerNIC, stationId, reservationTime)
+            if (selectedStationId == null || selectedDateTime == null) {
+                Toast.makeText(this, "Please select station, date & time", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val booking = Booking(nic, selectedStationId!!, selectedDateTime!!)
+            btnCreateBooking.isEnabled = false
+            btnCreateBooking.text = "Processing..."
+
             bookingRepository.createBooking(booking) { success, message ->
                 runOnUiThread {
+                    btnCreateBooking.isEnabled = true
+                    btnCreateBooking.text = "Confirm Booking"
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                     if (success) finish()
                 }
             }
         }
+    }
+
+    private fun loadActiveStations() {
+        bookingRepository.getActiveStations { fetched ->
+            runOnUiThread {
+                stations.clear()
+                stations.addAll(fetched)
+                if (stations.isEmpty()) {
+                    Toast.makeText(this, "No active stations available", Toast.LENGTH_SHORT).show()
+                    return@runOnUiThread
+                }
+
+                val adapter = ArrayAdapter(
+                    this,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    stations.map { "${it.name} - ${it.location}" }
+                )
+                spinnerStation.adapter = adapter
+                spinnerStation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long
+                    ) {
+                        selectedStationId = stations[position].id
+                        validateInputs()
+                    }
+
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                }
+            }
+        }
+    }
+
+    private fun showDatePicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                val formatted = String.format("%04d-%02d-%02d", year, month + 1, day)
+                tvDate.text = formatted
+                updateDateTime()
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun showTimePicker() {
+        val calendar = Calendar.getInstance()
+        TimePickerDialog(
+            this,
+            { _, hour, minute ->
+                val formatted = String.format("%02d:%02d", hour, minute)
+                tvTime.text = formatted
+                updateDateTime()
+            },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true
+        ).show()
+    }
+
+    private fun updateDateTime() {
+        val date = tvDate.text.toString()
+        val time = tvTime.text.toString()
+        if (date.contains("-") && time.contains(":")) {
+            val dateTime = "${date}T${time}:00Z"
+            selectedDateTime = dateTime
+            validateInputs()
+        }
+    }
+
+    private fun validateInputs() {
+        btnCreateBooking.isEnabled =
+            etOwnerNIC.text.toString().trim().length in 10..12 &&
+                    selectedStationId != null &&
+                    selectedDateTime != null
     }
 }
