@@ -164,4 +164,16 @@ class DatabaseHelper(context: Context) :
         db.close()
         return user
     }
+
+    fun isUserLoggedIn(): Boolean {
+        val db = readableDatabase
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM $TABLE_USER", null)
+        var userExists = false
+        if (cursor.moveToFirst()) {
+            userExists = cursor.getInt(0) > 0
+        }
+        cursor.close()
+        db.close()
+        return userExists
+    }
 }

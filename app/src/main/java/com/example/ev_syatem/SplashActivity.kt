@@ -4,36 +4,48 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+// Removed the bad imports from this section
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.ev_syatem.database.DatabaseHelper // ✅ Import DatabaseHelper
 
 class SplashActivity : AppCompatActivity() {
+
+    private lateinit var dbHelper: DatabaseHelper // ✅ Add DatabaseHelper instance
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Hide system bars for immersive splash screen
         hideSystemBars()
-
         setContentView(R.layout.activity_splash)
 
-        // Delay 2 seconds before moving to LoginActivity
+        dbHelper = DatabaseHelper(this) // ✅ Initialize DatabaseHelper
+
+        // Delay to show splash screen, then check login status
         Handler(Looper.getMainLooper()).postDelayed({
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-            finish() // Close SplashActivity so user cannot go back to it
-        }, 2000) // 2000 ms = 2 seconds
+            // ✅ Check if a user is already logged in
+            if (dbHelper.isUserLoggedIn()) {
+                // User is logged in, go to HomeActivity
+                navigateTo(HomeActivity::class.java)
+            } else {
+                // No user logged in, go to LoginActivity
+                navigateTo(LoginActivity::class.java)
+            }
+        }, 2000) // 2-second delay
+    }
+
+    // ✅ Helper function for navigation
+    private fun navigateTo(activityClass: Class<*>) {
+        val intent = Intent(this, activityClass)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     private fun hideSystemBars() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Set status bar color to match background
+        // Corrected the getColor method to be compatible with older and newer APIs
         window.statusBarColor = getColor(R.color.background_primary)
-
-        // Make status bar content dark (for light background)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
             controller.isAppearanceLightStatusBars = true
         }

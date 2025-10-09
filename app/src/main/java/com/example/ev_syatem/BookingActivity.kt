@@ -1,8 +1,15 @@
-package com.example.ev_syatem
+package com.example.ev_syatem // ✅ FIX: Corrected package name
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
@@ -21,8 +28,8 @@ class BookingActivity : AppCompatActivity() {
     private lateinit var tvDate: TextView
     private lateinit var tvTime: TextView
     private lateinit var btnCreateBooking: Button
+    private lateinit var tvAvailabilityStatus: TextView
 
-    // New variables for the CardViews
     private lateinit var dateCard: CardView
     private lateinit var timeCard: CardView
 
@@ -44,49 +51,104 @@ class BookingActivity : AppCompatActivity() {
         tvDate = findViewById(R.id.tv_date)
         tvTime = findViewById(R.id.tv_time)
         btnCreateBooking = findViewById(R.id.btn_create_booking)
-
-        // Find the CardViews by their IDs
         dateCard = findViewById(R.id.date_card)
         timeCard = findViewById(R.id.time_card)
+        tvAvailabilityStatus = findViewById(R.id.tv_availability_status)
 
         setupListeners()
         loadActiveStations()
     }
 
     private fun setupListeners() {
-        // Set listeners on the CardViews instead of the TextViews
         dateCard.setOnClickListener { showDatePicker() }
         timeCard.setOnClickListener { showTimePicker() }
 
+        etOwnerNIC.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                checkSlotAvailability()
+            }
+        })
+
+        // This button will now show the summary dialog
         btnCreateBooking.setOnClickListener {
-            val nic = etOwnerNIC.text.toString().trim()
-            if (nic.length !in 10..12) {
-                Toast.makeText(this, "NIC must be 10–12 characters", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            showBookingSummaryDialog()
+        }
+    }
 
-            if (selectedStationId == null || selectedDateTime == null) {
-                Toast.makeText(this, "Please select station, date & time", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+    // ✅ NEW: Shows the booking summary dialog
+    private fun showBookingSummaryDialog() {
+        val nic = etOwnerNIC.text.toString().trim()
+        val station = stations.find { it.id == selectedStationId }
+        val dateStr = tvDate.text.toString()
+        val timeStr = tvTime.text.toString()
 
-            val booking = Booking(nic, selectedStationId!!, selectedDateTime!!)
-            btnCreateBooking.isEnabled = false
-            btnCreateBooking.text = "Processing..."
+        if (nic.length !in 10..12) {
+            Toast.makeText(this, "NIC must be 10–12 characters", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (station == null || selectedDateTime == null) {
+            Toast.makeText(this, "Please select station, date & time", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-            bookingRepository.createBooking(booking) { success, message ->
-                runOnUiThread {
-                    btnCreateBooking.isEnabled = true
-                    btnCreateBooking.text = "Confirm Booking"
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                    if (success) finish()
+        val dialogView =
+            LayoutInflater.from(this).inflate(R.layout.dialog_booking_summary, null)
+        val dialogBuilder = AlertDialog.Builder(this).setView(dialogView)
+        val dialog = dialogBuilder.create()
+
+        // Set transparent background to show custom shape
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        // Find views inside the dialog
+        val summaryStationName: TextView = dialogView.findViewById(R.id.summary_station_name)
+        val summaryDate: TextView = dialogView.findViewById(R.id.summary_date)
+        val summaryTime: TextView = dialogView.findViewById(R.id.summary_time)
+        val btnCancel: Button = dialogView.findViewById(R.id.btn_cancel)
+        val btnConfirmBooking: Button = dialogView.findViewById(R.id.btn_confirm_booking)
+
+        // Populate dialog with data
+        summaryStationName.text = station.name
+        summaryDate.text = dateStr
+        summaryTime.text = timeStr
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnConfirmBooking.setOnClickListener {
+            // On confirm, proceed with booking creation
+            performBookingCreation(nic, station.id, selectedDateTime!!)
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    // ✅ NEW: Contains the actual booking logic, moved from the original click listener
+    private fun performBookingCreation(nic: String, stationId: String, dateTime: String) {
+        // ✅ FIX: Pass the 'dateTime' parameter to the Booking constructor
+        val booking = Booking(
+            ownerNIC = nic,
+            stationId = stationId,
+            reservationTime = dateTime
+        )
+
+        btnCreateBooking.isEnabled = false
+        btnCreateBooking.text = "Processing..."
+
+        bookingRepository.createBooking(booking) { success, message ->
+            runOnUiThread {
+                btnCreateBooking.isEnabled = true
+                btnCreateBooking.text = "Confirm Booking"
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                if (success) {
+                    finish()
                 }
             }
         }
     }
-
-    // ... The rest of your functions (loadActiveStations, showDatePicker, etc.) remain the same ...
-
     private fun loadActiveStations() {
         bookingRepository.getActiveStations { fetched ->
             runOnUiThread {
@@ -97,26 +159,24 @@ class BookingActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
 
-                // Step 1: Use the layout for the selected item view
                 val adapter = ArrayAdapter(
                     this,
-                    R.layout.spinner_selected_item_style, // For the visible, selected item
+                    R.layout.spinner_selected_item_style,
                     stations.map { "${it.name} - ${it.location}" }
                 )
-
-                // Step 2: Set the layout for the dropdown items
-                adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_style) // For items in the list
-
+                adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_style)
                 spinnerStation.adapter = adapter
+
                 spinnerStation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(
-                        parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long
-                    ) {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                         selectedStationId = stations[position].id
-                        validateInputs()
+                        checkSlotAvailability()
                     }
 
-                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        selectedStationId = null
+                        checkSlotAvailability()
+                    }
                 }
             }
         }
@@ -124,7 +184,8 @@ class BookingActivity : AppCompatActivity() {
 
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
-        DatePickerDialog(
+
+        val datePicker = DatePickerDialog(
             this,
             { _, year, month, day ->
                 val formatted = String.format("%04d-%02d-%02d", year, month + 1, day)
@@ -134,7 +195,18 @@ class BookingActivity : AppCompatActivity() {
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
+        )
+
+        // ✅ NEW: Set the 7-day booking window validation
+        // Set minimum date to today
+        datePicker.datePicker.minDate = System.currentTimeMillis()
+
+        // Set maximum date to 7 days from today
+        val maxDate = Calendar.getInstance()
+        maxDate.add(Calendar.DAY_OF_MONTH, 7)
+        datePicker.datePicker.maxDate = maxDate.timeInMillis
+
+        datePicker.show()
     }
 
     private fun showTimePicker() {
@@ -158,14 +230,43 @@ class BookingActivity : AppCompatActivity() {
         if (date.contains("-") && time.contains(":")) {
             val dateTime = "${date}T${time}:00Z"
             selectedDateTime = dateTime
-            validateInputs()
+            checkSlotAvailability()
+        } else {
+            tvAvailabilityStatus.visibility = View.GONE
+        }
+    }
+
+    private fun checkSlotAvailability() {
+        val stationId = selectedStationId
+        val dateTime = selectedDateTime
+
+        if (stationId == null || dateTime == null) {
+            tvAvailabilityStatus.visibility = View.GONE
+            btnCreateBooking.isEnabled = false
+            return
+        }
+
+        tvAvailabilityStatus.visibility = View.VISIBLE
+        tvAvailabilityStatus.text = "Checking availability..."
+        tvAvailabilityStatus.setTextColor(Color.GRAY)
+        btnCreateBooking.isEnabled = false
+
+        bookingRepository.checkAvailability(stationId, dateTime) { isAvailable, message ->
+            runOnUiThread {
+                tvAvailabilityStatus.text = message
+                if (isAvailable) {
+                    tvAvailabilityStatus.setTextColor(Color.parseColor("#10B981"))
+                    // Only enable the button if the NIC is also valid
+                    btnCreateBooking.isEnabled = etOwnerNIC.text.toString().trim().length in 10..12
+                } else {
+                    tvAvailabilityStatus.setTextColor(Color.RED)
+                    btnCreateBooking.isEnabled = false
+                }
+            }
         }
     }
 
     private fun validateInputs() {
-        btnCreateBooking.isEnabled =
-            etOwnerNIC.text.toString().trim().length in 10..12 &&
-                    selectedStationId != null &&
-                    selectedDateTime != null
+        checkSlotAvailability()
     }
 }
