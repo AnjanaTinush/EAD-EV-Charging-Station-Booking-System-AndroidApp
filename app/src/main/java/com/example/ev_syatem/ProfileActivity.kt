@@ -167,7 +167,7 @@ class ProfileActivity : AppCompatActivity() {
                     .toRequestBody("application/json".toMediaType())
 
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:7179/api/users/$userNic") // backend PUT endpoint
+                    .url("http://10.0.2.2:8080/api/users/$userNic") // backend PUT endpoint
                     .put(requestBody)
                     .build()
 
