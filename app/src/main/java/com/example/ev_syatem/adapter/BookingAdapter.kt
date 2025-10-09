@@ -5,8 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ev_syatem.databinding.ItemBookingBinding
 import com.example.ev_syatem.data.Booking
+import com.example.ev_syatem.databinding.ItemBookingBinding
 
 class BookingAdapter(
     private val bookings: List<Booking>,
@@ -32,18 +32,29 @@ class BookingAdapter(
                 else -> binding.tvBookingStatus.setBackgroundColor(Color.parseColor("#475569"))
             }
 
-            // Show or hide buttons based on listeners
-            binding.btnModify.visibility = if (onModifyClick != null) View.VISIBLE else View.GONE
-            binding.btnCancel.visibility = if (onCancelClick != null) View.VISIBLE else View.GONE
+            // ✅ FIX: Hide buttons for 'Completed' or 'Cancelled' bookings
+            val isFinalState = booking.status.equals("Completed", ignoreCase = true) ||
+                    booking.status.equals("Cancelled", ignoreCase = true)
 
-            // Button click listeners
+            if (isFinalState) {
+                binding.btnModify.visibility = View.GONE
+                binding.btnCancel.visibility = View.GONE
+            } else {
+                // Original logic for other states (like 'Pending')
+                binding.btnModify.visibility = if (onModifyClick != null) View.VISIBLE else View.GONE
+                binding.btnCancel.visibility = if (onCancelClick != null) View.VISIBLE else View.GONE
+            }
+
+
+            // Button click listeners (they won't be called if buttons are gone)
             binding.btnModify.setOnClickListener { onModifyClick?.invoke(booking) }
             binding.btnCancel.setOnClickListener { onCancelClick?.invoke(booking) }
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookingViewHolder {
-        val binding = ItemBookingBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val binding =
+            ItemBookingBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return BookingViewHolder(binding)
     }
 
