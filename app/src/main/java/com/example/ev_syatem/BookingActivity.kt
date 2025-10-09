@@ -1,8 +1,12 @@
-package com.example.ev_syatem
+package com.example.ev_syatem // ✅ FIX: Corrected package name
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
@@ -11,7 +15,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.data.Booking
 import com.example.ev_syatem.data.Station
 import com.example.ev_syatem.repository.BookingRepository
-import java.text.SimpleDateFormat
 import java.util.*
 
 class BookingActivity : AppCompatActivity() {
@@ -21,8 +24,8 @@ class BookingActivity : AppCompatActivity() {
     private lateinit var tvDate: TextView
     private lateinit var tvTime: TextView
     private lateinit var btnCreateBooking: Button
+    private lateinit var tvAvailabilityStatus: TextView
 
-    // New variables for the CardViews
     private lateinit var dateCard: CardView
     private lateinit var timeCard: CardView
 
@@ -39,24 +42,32 @@ class BookingActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_booking)
 
+        // Initialize all views
         etOwnerNIC = findViewById(R.id.et_owner_nic)
         spinnerStation = findViewById(R.id.spinner_station)
         tvDate = findViewById(R.id.tv_date)
         tvTime = findViewById(R.id.tv_time)
         btnCreateBooking = findViewById(R.id.btn_create_booking)
-
-        // Find the CardViews by their IDs
         dateCard = findViewById(R.id.date_card)
         timeCard = findViewById(R.id.time_card)
+        tvAvailabilityStatus = findViewById(R.id.tv_availability_status)
 
         setupListeners()
         loadActiveStations()
     }
 
     private fun setupListeners() {
-        // Set listeners on the CardViews instead of the TextViews
         dateCard.setOnClickListener { showDatePicker() }
         timeCard.setOnClickListener { showTimePicker() }
+
+        // ✅ FIX: Add a TextWatcher to re-validate when the user types in the NIC field
+        etOwnerNIC.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                checkSlotAvailability() // Re-run the check to potentially enable the button
+            }
+        })
 
         btnCreateBooking.setOnClickListener {
             val nic = etOwnerNIC.text.toString().trim()
@@ -79,13 +90,13 @@ class BookingActivity : AppCompatActivity() {
                     btnCreateBooking.isEnabled = true
                     btnCreateBooking.text = "Confirm Booking"
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                    if (success) finish()
+                    if (success) {
+                        finish()
+                    }
                 }
             }
         }
     }
-
-    // ... The rest of your functions (loadActiveStations, showDatePicker, etc.) remain the same ...
 
     private fun loadActiveStations() {
         bookingRepository.getActiveStations { fetched ->
@@ -97,26 +108,24 @@ class BookingActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
 
-                // Step 1: Use the layout for the selected item view
                 val adapter = ArrayAdapter(
                     this,
-                    R.layout.spinner_selected_item_style, // For the visible, selected item
+                    R.layout.spinner_selected_item_style,
                     stations.map { "${it.name} - ${it.location}" }
                 )
-
-                // Step 2: Set the layout for the dropdown items
-                adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_style) // For items in the list
-
+                adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_style)
                 spinnerStation.adapter = adapter
+
                 spinnerStation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(
-                        parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long
-                    ) {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                         selectedStationId = stations[position].id
-                        validateInputs()
+                        checkSlotAvailability()
                     }
 
-                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        selectedStationId = null
+                        checkSlotAvailability()
+                    }
                 }
             }
         }
@@ -124,7 +133,8 @@ class BookingActivity : AppCompatActivity() {
 
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
-        DatePickerDialog(
+        // ✅ FIX: Use android.app.DatePickerDialog, not a Compose one
+        val datePicker = DatePickerDialog(
             this,
             { _, year, month, day ->
                 val formatted = String.format("%04d-%02d-%02d", year, month + 1, day)
@@ -134,7 +144,9 @@ class BookingActivity : AppCompatActivity() {
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
+        )
+        datePicker.datePicker.minDate = System.currentTimeMillis()
+        datePicker.show()
     }
 
     private fun showTimePicker() {
@@ -158,14 +170,43 @@ class BookingActivity : AppCompatActivity() {
         if (date.contains("-") && time.contains(":")) {
             val dateTime = "${date}T${time}:00Z"
             selectedDateTime = dateTime
-            validateInputs()
+            checkSlotAvailability()
+        } else {
+            tvAvailabilityStatus.visibility = View.GONE
+        }
+    }
+
+    private fun checkSlotAvailability() {
+        val stationId = selectedStationId
+        val dateTime = selectedDateTime
+
+        if (stationId == null || dateTime == null) {
+            tvAvailabilityStatus.visibility = View.GONE
+            btnCreateBooking.isEnabled = false
+            return
+        }
+
+        tvAvailabilityStatus.visibility = View.VISIBLE
+        tvAvailabilityStatus.text = "Checking availability..."
+        tvAvailabilityStatus.setTextColor(Color.GRAY)
+        btnCreateBooking.isEnabled = false
+
+        bookingRepository.checkAvailability(stationId, dateTime) { isAvailable, message ->
+            runOnUiThread {
+                tvAvailabilityStatus.text = message
+                if (isAvailable) {
+                    tvAvailabilityStatus.setTextColor(Color.parseColor("#10B981"))
+                    // Only enable the button if the NIC is also valid
+                    btnCreateBooking.isEnabled = etOwnerNIC.text.toString().trim().length in 10..12
+                } else {
+                    tvAvailabilityStatus.setTextColor(Color.RED)
+                    btnCreateBooking.isEnabled = false
+                }
+            }
         }
     }
 
     private fun validateInputs() {
-        btnCreateBooking.isEnabled =
-            etOwnerNIC.text.toString().trim().length in 10..12 &&
-                    selectedStationId != null &&
-                    selectedDateTime != null
+        checkSlotAvailability()
     }
 }

@@ -86,4 +86,56 @@ class BookingRepository {
         })
     }
 
+    fun checkAvailability(stationId: String, reservationTime: String, callback: (isAvailable: Boolean, message: String) -> Unit) {
+        // This URL should fetch all bookings
+        val request = Request.Builder()
+            .url("http://10.0.2.2:8080/api/booking/all")
+            .get()
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(false, "Network error: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.body?.string()
+                if (!response.isSuccessful || body.isNullOrEmpty()) {
+                    callback(false, "Could not verify availability.")
+                    return
+                }
+
+                try {
+                    val allBookings = org.json.JSONArray(body)
+                    var isSlotTaken = false
+
+                    for (i in 0 until allBookings.length()) {
+                        val booking = allBookings.getJSONObject(i)
+                        val bookingStationId = booking.getString("stationId")
+                        val bookingTime = booking.getString("reservationTime")
+                        val status = booking.getString("status")
+
+                        // A slot is considered taken if it's for the same station, at the same time,
+                        // and its status is "Pending" or "Completed".
+                        if (bookingStationId == stationId &&
+                            bookingTime == reservationTime &&
+                            (status == "Pending" || status == "Completed")) {
+                            isSlotTaken = true
+                            break
+                        }
+                    }
+
+                    if (isSlotTaken) {
+                        callback(false, "Slot is already booked.")
+                    } else {
+                        callback(true, "Slot is available.")
+                    }
+
+                } catch (e: Exception) {
+                    callback(false, "Error parsing booking data.")
+                }
+            }
+        })
+    }
+
 }

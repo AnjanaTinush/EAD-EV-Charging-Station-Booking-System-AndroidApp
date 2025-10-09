@@ -199,7 +199,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:weightSum="2"
-                        android:layout_marginBottom="32dp">
+                        android:layout_marginBottom="16dp">
 
                         <!-- Date Card -->
                         <androidx.cardview.widget.CardView
@@ -279,6 +279,18 @@
                             </LinearLayout>
                         </androidx.cardview.widget.CardView>
                     </LinearLayout>
+
+                    <!-- ✅ NEW: Availability Status Indicator -->
+                    <TextView
+                        android:id="@+id/tv_availability_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="center"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:padding="8dp"
+                        android:visibility="gone"
+                        android:layout_marginBottom="24dp"/>
 
                     <!-- Confirm Booking Button -->
                     <Button
