@@ -1,5 +1,6 @@
 package com.example.ev_syatem.fragment
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.example.ev_syatem.BookingDetailsActivity
 import com.example.ev_syatem.R
 import com.example.ev_syatem.adapter.BookingAdapter
 import com.example.ev_syatem.data.Booking
@@ -58,7 +60,21 @@ class BookingHistoryFragment : Fragment() {
 
     private fun setupRecyclerView() {
         // History items are not modifiable
-        bookingAdapter = BookingAdapter(bookings, onModifyClick = null, onCancelClick = null)
+        bookingAdapter = BookingAdapter(
+            bookings,
+            // ✅ FIX: Add the onItemClick listener to handle navigation
+            onItemClick = { booking ->
+                val intent = Intent(requireContext(), BookingDetailsActivity::class.java).apply {
+                    putExtra("STATION_ID", booking.stationId)
+                    putExtra("RESERVATION_TIME", booking.reservationTime)
+                    putExtra("STATUS", booking.status)
+                    putExtra("QR_CODE", booking.qrCodeBase64)
+                }
+                startActivity(intent)
+            },
+            onModifyClick = null,
+            onCancelClick = null
+        )
         recyclerView.adapter = bookingAdapter
         recyclerView.layoutManager = LinearLayoutManager(context)
     }

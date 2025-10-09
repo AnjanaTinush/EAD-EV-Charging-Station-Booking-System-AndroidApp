@@ -2,7 +2,10 @@ package com.example.ev_syatem.fragment
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+// ✅ FIX: Corrected the import statement
+import android.content.Intent
 import android.os.Bundle
+// ✅ FIX: Removed duplicate imports that were here
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +18,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.ev_syatem.R
+// ✅ Import BookingDetailsActivity
+import com.example.ev_syatem.BookingDetailsActivity
 import com.example.ev_syatem.adapter.BookingAdapter
 import com.example.ev_syatem.data.Booking
 import com.example.ev_syatem.database.DatabaseHelper
@@ -23,6 +28,7 @@ import java.util.*
 
 class UpcomingBookingsFragment : Fragment() {
 
+    // ... (Your existing properties are fine)
     private lateinit var recyclerView: RecyclerView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var emptyState: LinearLayout
@@ -36,7 +42,7 @@ class UpcomingBookingsFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View? {
         dbHelper = DatabaseHelper(requireContext())
         return inflater.inflate(R.layout.fragment_upcoming_bookings, container, false)
@@ -50,19 +56,32 @@ class UpcomingBookingsFragment : Fragment() {
         emptyState = view.findViewById(R.id.empty_state)
         progressBar = view.findViewById(R.id.progress_bar)
 
-        setupRecyclerView()
+        setupRecyclerView() // This is where we will make the change
         setupSwipeRefresh()
     }
 
+    // ... (onResume, loadUpcomingBookings, etc. remain the same)
     override fun onResume() {
         super.onResume()
-        // Load bookings when the fragment becomes visible
         loadUpcomingBookings()
     }
 
     private fun setupRecyclerView() {
         bookingAdapter = BookingAdapter(
             bookings,
+            // ✅ 3. Implement the onItemClick logic
+            onItemClick = { booking ->
+                // Create an intent to navigate to the details activity
+                val intent = Intent(requireContext(), BookingDetailsActivity::class.java).apply {
+                    // Pass all the relevant data from the clicked booking
+                    putExtra("STATION_ID", booking.stationId)
+                    putExtra("RESERVATION_TIME", booking.reservationTime)
+                    putExtra("STATUS", booking.status)
+                    putExtra("QR_CODE", booking.qrCodeBase64)
+                }
+                // Start the activity
+                startActivity(intent)
+            },
             onModifyClick = { booking -> showModifyDialog(booking) },
             onCancelClick = { booking -> showCancelDialog(booking) }
         )
@@ -70,6 +89,7 @@ class UpcomingBookingsFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
     }
 
+    // ... (All other functions in the fragment remain the same)
     private fun setupSwipeRefresh() {
         swipeRefresh.setColorSchemeColors(requireContext().getColor(R.color.primary_green))
         swipeRefresh.setOnRefreshListener { loadUpcomingBookings() }
@@ -77,20 +97,14 @@ class UpcomingBookingsFragment : Fragment() {
 
     private fun loadUpcomingBookings() {
         showLoading(true)
-
-        // ✅ Get the logged-in user from the local database
         val user = dbHelper.getLatestUser()
         val ownerNIC = user?.get("nic")
-
-        // ✅ Check if NIC exists before making the call
         if (ownerNIC == null) {
             Toast.makeText(context, "Could not identify user. Please log in again.", Toast.LENGTH_LONG).show()
             showLoading(false)
-            updateEmptyState() // Show empty state if no user
+            updateEmptyState()
             return
         }
-
-        // ✅ Pass the owner's NIC to the repository function
         bookingRepository.getUpcomingBookings(ownerNIC) { fetchedBookings ->
             activity?.runOnUiThread {
                 showLoading(false)
@@ -116,7 +130,6 @@ class UpcomingBookingsFragment : Fragment() {
                             "%04d-%02d-%02dT%02d:%02d:00Z",
                             year, month + 1, day, hour, minute
                         )
-                        // Use the booking ID which should be a String
                         updateBooking(booking.id, newDateTime)
                     },
                     calendar.get(Calendar.HOUR_OF_DAY),
@@ -138,7 +151,7 @@ class UpcomingBookingsFragment : Fragment() {
             activity?.runOnUiThread {
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 if (success) {
-                    loadUpcomingBookings() // Refresh list on success
+                    loadUpcomingBookings()
                 } else {
                     showLoading(false)
                 }
@@ -163,7 +176,7 @@ class UpcomingBookingsFragment : Fragment() {
             activity?.runOnUiThread {
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 if (success) {
-                    loadUpcomingBookings() // Refresh list on success
+                    loadUpcomingBookings()
                 } else {
                     showLoading(false)
                 }
@@ -174,7 +187,7 @@ class UpcomingBookingsFragment : Fragment() {
     private fun showLoading(isLoading: Boolean) {
         progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         recyclerView.visibility = if (isLoading) View.GONE else View.VISIBLE
-        if(isLoading) emptyState.visibility = View.GONE
+        if (isLoading) emptyState.visibility = View.GONE
     }
 
     private fun updateEmptyState() {
