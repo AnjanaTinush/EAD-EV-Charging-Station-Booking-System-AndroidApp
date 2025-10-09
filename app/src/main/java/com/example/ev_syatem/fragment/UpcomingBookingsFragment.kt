@@ -31,14 +31,14 @@ class UpcomingBookingsFragment : Fragment() {
     private lateinit var bookingAdapter: BookingAdapter
     private val bookingRepository = BookingRepository()
     private val bookings = mutableListOf<Booking>()
-    private lateinit var dbHelper: DatabaseHelper // ✅ Add DatabaseHelper
+    private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        dbHelper = DatabaseHelper(requireContext()) // ✅ Initialize it
+        dbHelper = DatabaseHelper(requireContext())
         return inflater.inflate(R.layout.fragment_upcoming_bookings, container, false)
     }
 
@@ -52,6 +52,11 @@ class UpcomingBookingsFragment : Fragment() {
 
         setupRecyclerView()
         setupSwipeRefresh()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Load bookings when the fragment becomes visible
         loadUpcomingBookings()
     }
 
@@ -73,16 +78,19 @@ class UpcomingBookingsFragment : Fragment() {
     private fun loadUpcomingBookings() {
         showLoading(true)
 
-        // ✅ Get owner NIC from local database
+        // ✅ Get the logged-in user from the local database
         val user = dbHelper.getLatestUser()
         val ownerNIC = user?.get("nic")
 
+        // ✅ Check if NIC exists before making the call
         if (ownerNIC == null) {
-            Toast.makeText(context, "Error: User not logged in.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Could not identify user. Please log in again.", Toast.LENGTH_LONG).show()
             showLoading(false)
+            updateEmptyState() // Show empty state if no user
             return
         }
 
+        // ✅ Pass the owner's NIC to the repository function
         bookingRepository.getUpcomingBookings(ownerNIC) { fetchedBookings ->
             activity?.runOnUiThread {
                 showLoading(false)
@@ -95,24 +103,21 @@ class UpcomingBookingsFragment : Fragment() {
         }
     }
 
-    // ... rest of your functions (showModifyDialog, cancelBooking, etc.) remain the same
     private fun showModifyDialog(booking: Booking) {
         val calendar = Calendar.getInstance()
-
-        // Show date picker
-        DatePickerDialog(
+        val datePicker = DatePickerDialog(
             requireContext(),
             { _, year, month, day ->
-                // Show time picker after date selection
                 TimePickerDialog(
                     requireContext(),
                     { _, hour, minute ->
                         val newDateTime = String.format(
-                            Locale.US, // Use Locale for consistency
+                            Locale.US,
                             "%04d-%02d-%02dT%02d:%02d:00Z",
                             year, month + 1, day, hour, minute
                         )
-                        updateBooking(booking.id!!, newDateTime) // Use non-null assertion
+                        // Use the booking ID which should be a String
+                        updateBooking(booking.id, newDateTime)
                     },
                     calendar.get(Calendar.HOUR_OF_DAY),
                     calendar.get(Calendar.MINUTE),
@@ -122,23 +127,20 @@ class UpcomingBookingsFragment : Fragment() {
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
-        ).apply {
-            datePicker.minDate = System.currentTimeMillis()
-        }.show()
+        )
+        datePicker.datePicker.minDate = System.currentTimeMillis()
+        datePicker.show()
     }
 
     private fun updateBooking(bookingId: String, newDateTime: String) {
-        progressBar.visibility = View.VISIBLE
-
+        showLoading(true)
         bookingRepository.updateBooking(bookingId, newDateTime) { success, message ->
             activity?.runOnUiThread {
-                progressBar.visibility = View.GONE
-
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 if (success) {
-                    Toast.makeText(context, "✓ Booking updated successfully", Toast.LENGTH_SHORT).show()
-                    loadUpcomingBookings()
+                    loadUpcomingBookings() // Refresh list on success
                 } else {
-                    Toast.makeText(context, "✗ Failed to update: $message", Toast.LENGTH_LONG).show()
+                    showLoading(false)
                 }
             }
         }
@@ -149,32 +151,30 @@ class UpcomingBookingsFragment : Fragment() {
             .setTitle("Cancel Booking")
             .setMessage("Are you sure you want to cancel this booking?")
             .setPositiveButton("Yes, Cancel") { _, _ ->
-                cancelBooking(booking.id!!) // Use non-null assertion
+                cancelBooking(booking.id)
             }
             .setNegativeButton("No", null)
             .show()
     }
 
     private fun cancelBooking(bookingId: String) {
-        progressBar.visibility = View.VISIBLE
-
+        showLoading(true)
         bookingRepository.cancelBooking(bookingId, "User cancelled") { success, message ->
             activity?.runOnUiThread {
-                progressBar.visibility = View.GONE
-
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 if (success) {
-                    Toast.makeText(context, "✓ Booking cancelled", Toast.LENGTH_SHORT).show()
-                    loadUpcomingBookings()
+                    loadUpcomingBookings() // Refresh list on success
                 } else {
-                    Toast.makeText(context, "✗ Failed to cancel: $message", Toast.LENGTH_LONG).show()
+                    showLoading(false)
                 }
             }
         }
     }
 
-    private fun showLoading(show: Boolean) {
-        progressBar.visibility = if (show) View.VISIBLE else View.GONE
-        recyclerView.visibility = if (show) View.GONE else View.VISIBLE
+    private fun showLoading(isLoading: Boolean) {
+        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        recyclerView.visibility = if (isLoading) View.GONE else View.VISIBLE
+        if(isLoading) emptyState.visibility = View.GONE
     }
 
     private fun updateEmptyState() {
@@ -187,4 +187,3 @@ class UpcomingBookingsFragment : Fragment() {
         }
     }
 }
-

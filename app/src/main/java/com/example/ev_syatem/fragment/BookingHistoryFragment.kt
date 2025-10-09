@@ -35,7 +35,6 @@ class BookingHistoryFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         dbHelper = DatabaseHelper(requireContext())
-        // Using the same layout as UpcomingBookingsFragment
         return inflater.inflate(R.layout.fragment_upcoming_bookings, container, false)
     }
 
@@ -49,11 +48,16 @@ class BookingHistoryFragment : Fragment() {
 
         setupRecyclerView()
         setupSwipeRefresh()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Load history when the fragment becomes visible
         loadBookingHistory()
     }
 
     private fun setupRecyclerView() {
-        // Past bookings don’t allow modify or cancel
+        // History items are not modifiable
         bookingAdapter = BookingAdapter(bookings, onModifyClick = null, onCancelClick = null)
         recyclerView.adapter = bookingAdapter
         recyclerView.layoutManager = LinearLayoutManager(context)
@@ -67,16 +71,19 @@ class BookingHistoryFragment : Fragment() {
     private fun loadBookingHistory() {
         showLoading(true)
 
-        // Get logged-in user NIC
+        // ✅ Get the logged-in user from the local database
         val user = dbHelper.getLatestUser()
         val ownerNIC = user?.get("nic")
 
+        // ✅ Check if NIC exists before making the call
         if (ownerNIC == null) {
-            Toast.makeText(context, "Error: User not logged in.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Could not identify user. Please log in again.", Toast.LENGTH_LONG).show()
             showLoading(false)
+            updateEmptyState() // Show empty state if no user
             return
         }
 
+        // ✅ Pass the owner's NIC to the repository function
         bookingRepository.getBookingHistory(ownerNIC) { fetchedBookings ->
             activity?.runOnUiThread {
                 showLoading(false)
@@ -89,9 +96,10 @@ class BookingHistoryFragment : Fragment() {
         }
     }
 
-    private fun showLoading(show: Boolean) {
-        progressBar.visibility = if (show) View.VISIBLE else View.GONE
-        recyclerView.visibility = if (show) View.GONE else View.VISIBLE
+    private fun showLoading(isLoading: Boolean) {
+        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        recyclerView.visibility = if (isLoading) View.GONE else View.VISIBLE
+        if(isLoading) emptyState.visibility = View.GONE
     }
 
     private fun updateEmptyState() {
