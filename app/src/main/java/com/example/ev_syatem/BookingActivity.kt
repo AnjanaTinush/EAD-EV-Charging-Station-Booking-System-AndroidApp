@@ -133,7 +133,7 @@ class BookingActivity : AppCompatActivity() {
 
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
-        // ✅ FIX: Use android.app.DatePickerDialog, not a Compose one
+
         val datePicker = DatePickerDialog(
             this,
             { _, year, month, day ->
@@ -145,7 +145,16 @@ class BookingActivity : AppCompatActivity() {
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         )
+
+        // ✅ NEW: Set the 7-day booking window validation
+        // Set minimum date to today
         datePicker.datePicker.minDate = System.currentTimeMillis()
+
+        // Set maximum date to 7 days from today
+        val maxDate = Calendar.getInstance()
+        maxDate.add(Calendar.DAY_OF_MONTH, 7)
+        datePicker.datePicker.maxDate = maxDate.timeInMillis
+
         datePicker.show()
     }
 
