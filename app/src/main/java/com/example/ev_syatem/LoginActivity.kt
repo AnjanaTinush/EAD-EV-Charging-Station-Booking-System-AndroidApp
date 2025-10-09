@@ -32,7 +32,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        // ✅ Setup immersive UI
+        // Setup immersive UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green_dark)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
@@ -86,6 +86,10 @@ class LoginActivity : AppCompatActivity() {
         val nic = nicInput.text.toString().trim()
         val password = passwordInput.text.toString()
 
+        // Set button to loading state
+        loginButton.isEnabled = false
+        loginButton.text = "Signing In..."
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
@@ -97,7 +101,7 @@ class LoginActivity : AppCompatActivity() {
 
                 val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
 
-                // ✅ Correct API endpoint for mobile login (IIS hosted)
+                // Correct API endpoint for mobile login (IIS hosted)
                 val request = Request.Builder()
                     .url("http://10.0.2.2:8080/api/auth/login?platform=mobile")
                     .post(requestBody)
@@ -117,9 +121,9 @@ class LoginActivity : AppCompatActivity() {
                             val email = userObj.optString("email", "")
                             val phone = userObj.optString("phone", "")
                             val role = userObj.optString("role", "")
-                            val isActive = userObj.optBoolean("isActive", true) // ✅ added
+                            val isActive = userObj.optBoolean("isActive", true)
 
-                            // ✅ Check if account is deactivated
+                            // Check if account is deactivated
                             if (!isActive) {
                                 Toast.makeText(
                                     this@LoginActivity,
@@ -129,11 +133,11 @@ class LoginActivity : AppCompatActivity() {
                                 return@withContext
                             }
 
-                            // ✅ Store minimal user info locally (ID, username, role)
+                            // Store minimal user info locally
                             dbHelper.clearUsers()
                             dbHelper.insertUser(
-                                id,               // Using id as NIC (since NIC column expects unique ID)
-                                username,         // full name field reused for username
+                                id,
+                                username,
                                 email,
                                 phone,
                                 role,
@@ -146,7 +150,7 @@ class LoginActivity : AppCompatActivity() {
                                 Toast.LENGTH_LONG
                             ).show()
 
-                            // ✅ Navigate to HomeActivity
+                            // Navigate to HomeActivity
                             val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             startActivity(intent)
@@ -176,6 +180,12 @@ class LoginActivity : AppCompatActivity() {
                         "Login failed: ${e.localizedMessage}",
                         Toast.LENGTH_LONG
                     ).show()
+                }
+            } finally {
+                // Always re-enable button after attempt
+                withContext(Dispatchers.Main) {
+                    loginButton.isEnabled = true
+                    loginButton.text = "Login"
                 }
             }
         }
