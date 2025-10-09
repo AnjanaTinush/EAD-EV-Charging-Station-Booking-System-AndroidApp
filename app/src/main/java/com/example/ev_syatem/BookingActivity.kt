@@ -128,7 +128,12 @@ class BookingActivity : AppCompatActivity() {
 
     // ✅ NEW: Contains the actual booking logic, moved from the original click listener
     private fun performBookingCreation(nic: String, stationId: String, dateTime: String) {
-        val booking = Booking(nic, stationId, dateTime)
+        // ✅ FIX: Pass the 'dateTime' parameter to the Booking constructor
+        val booking = Booking(
+            ownerNIC = nic,
+            stationId = stationId,
+            reservationTime = dateTime
+        )
 
         btnCreateBooking.isEnabled = false
         btnCreateBooking.text = "Processing..."

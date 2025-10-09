@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.Ev_syatem" parent="Base.Theme.Ev_syatem" />
+    <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <!-- You can also specify a custom font family here if you have one -->
+        <!-- <item name="fontFamily">@font/your_custom_font</item> -->
+    </style>
 </resources>

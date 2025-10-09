@@ -31,18 +31,14 @@ class HomeActivity : AppCompatActivity() {
 
         loadUserData()
         setupBottomNavigation()
-
-        // ✅ Add listener for Book Charging Station button
-        val bookStationButton: LinearLayout = findViewById(R.id.book_station_button)
-        bookStationButton.setOnClickListener {
-            navigateToBooking()
-        }
+        setupClickListeners() // ✅ Call the new function
     }
 
     private fun loadUserData() {
         val user = dbHelper.getLatestUser()
         if (user != null) {
-            userNameText.text = "Welcome, ${user["full_name"]}"
+            // Assuming the key for the user's name is "username" from the login response
+            userNameText.text = "Welcome, ${user["username"]}"
         } else {
             Toast.makeText(this, "Please log in again", Toast.LENGTH_SHORT).show()
             navigateToLogin()
@@ -52,15 +48,33 @@ class HomeActivity : AppCompatActivity() {
     private fun setupBottomNavigation() {
         bottomNavigation.selectedItemId = R.id.navigation_home
         bottomNavigation.setOnItemSelectedListener { item ->
-
             when (item.itemId) {
                 R.id.navigation_home -> true
                 R.id.navigation_profile -> {
                     navigateToProfile()
                     true
                 }
+                // ✅ Add navigation for booking history
+                R.id.navigation_booking -> {
+                    navigateToMyReservations()
+                    true
+                }
                 else -> false
             }
+        }
+    }
+
+    // ✅ NEW: Centralize click listeners here
+    private fun setupClickListeners() {
+        val bookStationButton: LinearLayout = findViewById(R.id.book_station_button)
+        bookStationButton.setOnClickListener {
+            navigateToBooking()
+        }
+
+        // ✅ Add listener for the new "My Reservations" button
+        val myReservationsButton: LinearLayout = findViewById(R.id.my_reservations_button)
+        myReservationsButton.setOnClickListener {
+            navigateToMyReservations()
         }
     }
 
@@ -76,9 +90,14 @@ class HomeActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // ✅ Booking navigation
     private fun navigateToBooking() {
         val intent = Intent(this, BookingActivity::class.java)
+        startActivity(intent)
+    }
+
+    // ✅ NEW: Navigation function for My Reservations
+    private fun navigateToMyReservations() {
+        val intent = Intent(this, BookingsActivity::class.java)
         startActivity(intent)
     }
 }
