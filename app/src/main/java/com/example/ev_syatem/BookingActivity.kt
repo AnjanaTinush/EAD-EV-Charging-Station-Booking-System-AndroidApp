@@ -5,6 +5,7 @@ import android.app.TimePickerDialog
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.data.Booking
@@ -20,6 +21,10 @@ class BookingActivity : AppCompatActivity() {
     private lateinit var tvDate: TextView
     private lateinit var tvTime: TextView
     private lateinit var btnCreateBooking: Button
+
+    // New variables for the CardViews
+    private lateinit var dateCard: CardView
+    private lateinit var timeCard: CardView
 
     private val bookingRepository = BookingRepository()
     private val stations = mutableListOf<Station>()
@@ -40,13 +45,18 @@ class BookingActivity : AppCompatActivity() {
         tvTime = findViewById(R.id.tv_time)
         btnCreateBooking = findViewById(R.id.btn_create_booking)
 
+        // Find the CardViews by their IDs
+        dateCard = findViewById(R.id.date_card)
+        timeCard = findViewById(R.id.time_card)
+
         setupListeners()
         loadActiveStations()
     }
 
     private fun setupListeners() {
-        tvDate.setOnClickListener { showDatePicker() }
-        tvTime.setOnClickListener { showTimePicker() }
+        // Set listeners on the CardViews instead of the TextViews
+        dateCard.setOnClickListener { showDatePicker() }
+        timeCard.setOnClickListener { showTimePicker() }
 
         btnCreateBooking.setOnClickListener {
             val nic = etOwnerNIC.text.toString().trim()
@@ -75,6 +85,8 @@ class BookingActivity : AppCompatActivity() {
         }
     }
 
+    // ... The rest of your functions (loadActiveStations, showDatePicker, etc.) remain the same ...
+
     private fun loadActiveStations() {
         bookingRepository.getActiveStations { fetched ->
             runOnUiThread {
@@ -85,11 +97,16 @@ class BookingActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
 
+                // Step 1: Use the layout for the selected item view
                 val adapter = ArrayAdapter(
                     this,
-                    android.R.layout.simple_spinner_dropdown_item,
+                    R.layout.spinner_selected_item_style, // For the visible, selected item
                     stations.map { "${it.name} - ${it.location}" }
                 )
+
+                // Step 2: Set the layout for the dropdown items
+                adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_style) // For items in the list
+
                 spinnerStation.adapter = adapter
                 spinnerStation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(
