@@ -92,17 +92,24 @@ class ProfileActivity : AppCompatActivity() {
                 R.id.navigation_station -> {
                     navigateToStationMap(); true
                 }
+                R.id.navigation_booking -> {
+                    navigateToBooking(); true
+                }
                 else -> false
             }
         }
     }
 
     private fun loadUserData() {
-        val user = dbHelper.getUserByNic(userNic)
+        val user = dbHelper.getLatestUser() // Fetch the latest user for display
         if (user != null) {
             fullNameInput.setText(user["full_name"])
             emailInput.setText(user["email"])
             phoneInput.setText(user["phone"])
+
+            // Also update the header text in case it's different
+            profileNameText.text = user["full_name"]
+            profileNicText.text = user["nic"]
         }
     }
 
@@ -155,19 +162,22 @@ class ProfileActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
+                val user = dbHelper.getLatestUser() ?: return@launch
+                val userId = user["id"] // The actual MongoDB ID
+                val userRole = user["role"] ?: "EvOwner"
 
                 val jsonBody = JSONObject().apply {
                     put("username", username)
                     put("email", email)
                     put("phone", phone)
-                    put("nic", userNic)
+                    put("nic", userNic) // NIC remains constant
                 }
 
                 val requestBody = jsonBody.toString()
                     .toRequestBody("application/json".toMediaType())
 
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:8080/api/users/$userNic") // backend PUT endpoint
+                    .url("http://10.0.2.2:8080/api/users/$userId") // Use the actual user ID
                     .put(requestBody)
                     .build()
 
@@ -176,14 +186,9 @@ class ProfileActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
-                        dbHelper.insertUser(
-                            userNic,
-                            username,
-                            email,
-                            phone,
-                            "EvOwner",
-                            System.currentTimeMillis().toString()
-                        )
+                        // Update the local database with the new details
+                        dbHelper.clearUsers() // Clear old entry
+                        dbHelper.insertUser(nic = userNic, username, email, phone, userRole, System.currentTimeMillis().toString())
 
                         Toast.makeText(
                             this@ProfileActivity,
@@ -191,11 +196,11 @@ class ProfileActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
 
-                        setEditMode(false)
+                        setEditMode(false) // This will trigger a reload of user data
                     } else {
                         Toast.makeText(
                             this@ProfileActivity,
-                            "Failed: ${body.ifEmpty { "Unknown error" }}",
+                            "Update failed: ${body.ifEmpty { "Unknown error" }}",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -220,7 +225,7 @@ class ProfileActivity : AppCompatActivity() {
     private fun showDeactivateConfirmationDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Deactivate Account")
-            .setMessage("Are you sure you want to deactivate your account? You will be logged out and cannot log in until reactivated by admin.")
+            .setMessage("Are you sure you want to deactivate your account? You will be logged out and cannot log in until reactivated by an admin.")
             .setPositiveButton("Deactivate") { dialog, _ ->
                 deactivateAccount()
                 dialog.dismiss()
@@ -237,10 +242,11 @@ class ProfileActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
+                val user = dbHelper.getLatestUser() ?: return@launch
+                val userId = user["id"] // The actual MongoDB ID
 
                 val request = Request.Builder()
-                    // 👇 For Android emulator use 10.0.2.2 instead of localhost
-                    .url("http://10.0.2.2:8080/api/users/$userNic/deactivate")
+                    .url("http://10.0.2.2:8080/api/users/$userId/deactivate")
                     .patch("".toRequestBody("application/json".toMediaType()))
                     .build()
 
@@ -255,18 +261,12 @@ class ProfileActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
 
-                        // ✅ Clear session
-                        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
-                            .edit()
-                            .remove("USER_NIC")
-                            .apply()
-
-                        // ✅ Redirect to Login
-                        navigateToLogin()
+                        // ✅ Fully log out the user
+                        logout()
                     } else {
                         Toast.makeText(
                             this@ProfileActivity,
-                            "Failed: ${responseBody.ifEmpty { "Unknown error" }}",
+                            "Deactivation failed: ${responseBody.ifEmpty { "Unknown error" }}",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -300,15 +300,15 @@ class ProfileActivity : AppCompatActivity() {
         } else {
             editToggleButton.text = "Edit"
             saveProfileButton.visibility = android.view.View.GONE
+            // Reload data from DB to discard any unsaved changes
             loadUserData()
         }
     }
 
     private fun logout() {
-        getSharedPreferences("EV_PREFS", Context.MODE_PRIVATE)
-            .edit()
-            .remove("USER_NIC")
-            .apply()
+        // ✅ Clear user data from the local database
+        dbHelper.clearUsers()
+
         Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
         navigateToLogin()
     }
@@ -320,6 +320,7 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun navigateToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
+        // Clear the activity stack to prevent the user from going back to the profile
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
@@ -328,5 +329,10 @@ class ProfileActivity : AppCompatActivity() {
     private fun navigateToStationMap() {
         startActivity(Intent(this, StationMapActivity::class.java))
         finish()
+    }
+
+    private fun navigateToBooking() {
+        startActivity(Intent(this, BookingActivity::class.java))
+        // Do not finish, so the user can come back
     }
 }

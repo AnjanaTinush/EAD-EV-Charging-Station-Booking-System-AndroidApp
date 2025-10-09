@@ -32,6 +32,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        // Setup immersive UI
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = getColor(R.color.primary_green_dark)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
@@ -85,6 +86,10 @@ class LoginActivity : AppCompatActivity() {
         val nic = nicInput.text.toString().trim()
         val password = passwordInput.text.toString()
 
+        // Set button to loading state
+        loginButton.isEnabled = false
+        loginButton.text = "Signing In..."
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
@@ -96,6 +101,7 @@ class LoginActivity : AppCompatActivity() {
 
                 val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
 
+                // Correct API endpoint for mobile login (IIS hosted)
                 val request = Request.Builder()
                     .url("http://10.0.2.2:8080/api/auth/login?platform=mobile")
                     .post(requestBody)
@@ -114,9 +120,10 @@ class LoginActivity : AppCompatActivity() {
                             val username = userObj.optString("username", "")
                             val email = userObj.optString("email", "")
                             val phone = userObj.optString("phone", "")
-                            val role = userObj.optString("role", "").trim()  // ✅ normalize
+                            val role = userObj.optString("role", "")
                             val isActive = userObj.optBoolean("isActive", true)
 
+                            // Check if account is deactivated
                             if (!isActive) {
                                 Toast.makeText(
                                     this@LoginActivity,
@@ -126,6 +133,7 @@ class LoginActivity : AppCompatActivity() {
                                 return@withContext
                             }
 
+                            // Store minimal user info locally
                             dbHelper.clearUsers()
                             dbHelper.insertUser(
                                 id,
@@ -142,24 +150,17 @@ class LoginActivity : AppCompatActivity() {
                                 Toast.LENGTH_LONG
                             ).show()
 
-                            // ✅ Role-based navigation
-                            val targetIntent = when (role) {
-                                "EvOwner" -> Intent(this@LoginActivity, HomeActivity::class.java)
-                                "StationOperator" -> Intent(this@LoginActivity, StationOperatorHomeActivity::class.java)
-                                else -> null
-                            }
-
-                            if (targetIntent != null) {
-                                targetIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                startActivity(targetIntent)
-                                finish()
-                            } else {
-                                Toast.makeText(
-                                    this@LoginActivity,
-                                    "Unknown role: $role",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            // Navigate to HomeActivity
+                            val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
+                            finish()
+                        } else {
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Invalid server response.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     } else {
                         val msg = try {
@@ -180,8 +181,13 @@ class LoginActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 }
+            } finally {
+                // Always re-enable button after attempt
+                withContext(Dispatchers.Main) {
+                    loginButton.isEnabled = true
+                    loginButton.text = "Login"
+                }
             }
         }
     }
-
 }
