@@ -156,8 +156,14 @@ class LoginActivity : AppCompatActivity() {
                                 Toast.LENGTH_LONG
                             ).show()
 
-                            // Navigate to HomeActivity
-                            val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            // ✅ Navigate based on role
+                            val next = if (role.equals("StationOperator", ignoreCase = true)) {
+                                StationOperatorHomeActivity::class.java
+                            } else {
+                                HomeActivity::class.java
+                            }
+
+                            val intent = Intent(this@LoginActivity, next)
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             startActivity(intent)
                             finish()
