@@ -32,19 +32,16 @@ class BookingAdapter(
                 else -> binding.tvBookingStatus.setBackgroundColor(Color.parseColor("#475569"))
             }
 
-            // ✅ FIX: Hide buttons for 'Completed' or 'Cancelled' bookings
-            val isFinalState = booking.status.equals("Completed", ignoreCase = true) ||
-                    booking.status.equals("Cancelled", ignoreCase = true)
-
-            if (isFinalState) {
-                binding.btnModify.visibility = View.GONE
-                binding.btnCancel.visibility = View.GONE
-            } else {
-                // Original logic for other states (like 'Pending')
+            // ✅ FIX: Show buttons ONLY for 'Pending' bookings
+            if (booking.status.equals("Pending", ignoreCase = true)) {
+                // For pending bookings, show buttons if click handlers are provided
                 binding.btnModify.visibility = if (onModifyClick != null) View.VISIBLE else View.GONE
                 binding.btnCancel.visibility = if (onCancelClick != null) View.VISIBLE else View.GONE
+            } else {
+                // For all other statuses (Completed, Cancelled, etc.), hide the buttons
+                binding.btnModify.visibility = View.GONE
+                binding.btnCancel.visibility = View.GONE
             }
-
 
             // Button click listeners (they won't be called if buttons are gone)
             binding.btnModify.setOnClickListener { onModifyClick?.invoke(booking) }
