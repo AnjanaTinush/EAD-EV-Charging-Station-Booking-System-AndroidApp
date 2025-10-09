@@ -122,6 +122,7 @@ class LoginActivity : AppCompatActivity() {
                             val phone = userObj.optString("phone", "")
                             val role = userObj.optString("role", "")
                             val isActive = userObj.optBoolean("isActive", true)
+                            val nicFromServer = userObj.optString("nic", "")
 
                             // Check if account is deactivated
                             if (!isActive) {
@@ -130,18 +131,23 @@ class LoginActivity : AppCompatActivity() {
                                     "Your account is deactivated. Please contact admin.",
                                     Toast.LENGTH_LONG
                                 ).show()
+                                // Re-enable button text before return
+                                loginButton.isEnabled = true
+                                loginButton.text = "Login"
                                 return@withContext
                             }
 
-                            // Store minimal user info locally
+                            // Store minimal user info locally (clear previous session)
                             dbHelper.clearUsers()
                             dbHelper.insertUser(
-                                id,
-                                username,
-                                email,
-                                phone,
-                                role,
-                                System.currentTimeMillis().toString()
+                                serverId = id,
+                                username = username,
+                                email = email,
+                                phone = phone,
+                                nic = nicFromServer,
+                                role = role,
+                                isActive = isActive,
+                                createdAt = System.currentTimeMillis().toString()
                             )
 
                             Toast.makeText(
@@ -150,8 +156,14 @@ class LoginActivity : AppCompatActivity() {
                                 Toast.LENGTH_LONG
                             ).show()
 
-                            // Navigate to HomeActivity
-                            val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            // ✅ Navigate based on role
+                            val next = if (role.equals("StationOperator", ignoreCase = true)) {
+                                StationOperatorHomeActivity::class.java
+                            } else {
+                                HomeActivity::class.java
+                            }
+
+                            val intent = Intent(this@LoginActivity, next)
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             startActivity(intent)
                             finish()

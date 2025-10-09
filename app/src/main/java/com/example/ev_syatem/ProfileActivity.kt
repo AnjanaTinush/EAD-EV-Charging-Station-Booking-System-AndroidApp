@@ -37,8 +37,10 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: DatabaseHelper
     private var userNic: String = ""
-    private var userId: String = ""   // 🔹 actual MongoDB ID (we’ll load from local user data if stored)
     private var isEditMode: Boolean = false
+
+    // SharedPreferences for lightweight session flags
+    private val prefs by lazy { getSharedPreferences("auth", Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +60,17 @@ class ProfileActivity : AppCompatActivity() {
             profileNicText = findViewById(R.id.profile_nic_text)
             profileNameText.text = user["full_name"]
             profileNicText.text = user["nic"]
+
+            // prime SharedPreferences if not already set
+            prefs.edit()
+                .putString("user_id", user["server_id"])
+                .putString("username", user["username"] ?: user["full_name"])
+                .putString("email", user["email"])
+                .putString("phone", user["phone"])
+                .putString("nic", user["nic"])
+                .putString("role", user["role"])
+                .putBoolean("is_active", (user["is_active"] ?: "1") == "1")
+                .apply()
         } else {
             navigateToLogin()
             return
@@ -86,28 +99,20 @@ class ProfileActivity : AppCompatActivity() {
         bottomNavigation.selectedItemId = R.id.navigation_profile
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.navigation_home -> {
-                    navigateToHome(); true
-                }
-                R.id.navigation_station -> {
-                    navigateToStationMap(); true
-                }
-                R.id.navigation_booking -> {
-                    navigateToBooking(); true
-                }
+                R.id.navigation_home -> { navigateToHome(); true }
+                R.id.navigation_station -> { navigateToStationMap(); true }
+                R.id.navigation_booking -> { navigateToBooking(); true }
                 else -> false
             }
         }
     }
 
     private fun loadUserData() {
-        val user = dbHelper.getLatestUser() // Fetch the latest user for display
+        val user = dbHelper.getLatestUser()
         if (user != null) {
             fullNameInput.setText(user["full_name"])
             emailInput.setText(user["email"])
             phoneInput.setText(user["phone"])
-
-            // Also update the header text in case it's different
             profileNameText.text = user["full_name"]
             profileNicText.text = user["nic"]
         }
@@ -124,7 +129,6 @@ class ProfileActivity : AppCompatActivity() {
 
         logoutButton.setOnClickListener { logout() }
 
-        // 🔹 NEW: Deactivate account confirmation + API call
         deactivateAccountButton.setOnClickListener {
             showDeactivateConfirmationDialog()
         }
@@ -139,18 +143,19 @@ class ProfileActivity : AppCompatActivity() {
         emailInput.error = null
         phoneInput.error = null
 
-        if (name.isEmpty()) {
-            fullNameInput.error = "Full name required"; return false
-        }
+        if (name.isEmpty()) { fullNameInput.error = "Full name required"; return false }
         if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             emailInput.error = "Invalid email"; return false
         }
-        if (phone.isEmpty() || phone.length < 10) {
-            phoneInput.error = "Invalid phone"; return false
+        if (phone.isEmpty() || phone.length != 10) {
+            phoneInput.error = "Phone must be 10 digits"; return false
         }
         return true
     }
 
+    // ===========================
+    //       UPDATE PROFILE
+    // ===========================
     private fun updateUserProfile() {
         val username = fullNameInput.text.toString().trim()
         val email = emailInput.text.toString().trim()
@@ -163,8 +168,17 @@ class ProfileActivity : AppCompatActivity() {
             try {
                 val client = OkHttpClient()
                 val user = dbHelper.getLatestUser() ?: return@launch
-                val userId = user["id"] // The actual MongoDB ID
-                val userRole = user["role"] ?: "EvOwner"
+
+                // ✅ Use Mongo ID saved in SQLite ("server_id"), not a local "id"
+                val userId = user["server_id"] ?: ""
+                if (userId.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProfileActivity, "User ID missing", Toast.LENGTH_LONG).show()
+                        saveProfileButton.isEnabled = true
+                        saveProfileButton.text = "Save Changes"
+                    }
+                    return@launch
+                }
 
                 val jsonBody = JSONObject().apply {
                     put("username", username)
@@ -176,8 +190,9 @@ class ProfileActivity : AppCompatActivity() {
                 val requestBody = jsonBody.toString()
                     .toRequestBody("application/json".toMediaType())
 
+                // Use 10.0.2.2 for Android emulator to reach localhost of host
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:8080/api/users/$userId") // Use the actual user ID
+                    .url("http://10.0.2.2:8080/api/users/$userId")
                     .put(requestBody)
                     .build()
 
@@ -186,9 +201,33 @@ class ProfileActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
-                        // Update the local database with the new details
-                        dbHelper.clearUsers() // Clear old entry
-                        dbHelper.insertUser(nic = userNic, username, email, phone, userRole, System.currentTimeMillis().toString())
+                        // Keep role and isActive from current session
+                        val role = user["role"] ?: "EvOwner"
+                        val isActive = (user["is_active"] ?: "1") == "1"
+
+                        // ✅ Update SQLite (replace existing session user)
+                        dbHelper.clearUsers()
+                        dbHelper.insertUser(
+                            serverId = userId,
+                            username = username,
+                            email = email,
+                            phone = phone,
+                            nic = userNic,
+                            role = role,
+                            isActive = isActive,
+                            createdAt = System.currentTimeMillis().toString()
+                        )
+
+                        // ✅ Update SharedPreferences snapshot
+                        prefs.edit()
+                            .putString("user_id", userId)
+                            .putString("username", username)
+                            .putString("email", email)
+                            .putString("phone", phone)
+                            .putString("nic", userNic)
+                            .putString("role", role)
+                            .putBoolean("is_active", isActive)
+                            .apply()
 
                         Toast.makeText(
                             this@ProfileActivity,
@@ -196,7 +235,7 @@ class ProfileActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
 
-                        setEditMode(false) // This will trigger a reload of user data
+                        setEditMode(false)
                     } else {
                         Toast.makeText(
                             this@ProfileActivity,
@@ -221,7 +260,9 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    // 🔹 NEW FUNCTION — show dialog before deactivating
+    // ===========================
+    //       DEACTIVATE USER
+    // ===========================
     private fun showDeactivateConfirmationDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Deactivate Account")
@@ -230,20 +271,24 @@ class ProfileActivity : AppCompatActivity() {
                 deactivateAccount()
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
+            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .setCancelable(true)
             .show()
     }
 
-    // 🔹 NEW FUNCTION — call backend PATCH API
     private fun deactivateAccount() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = OkHttpClient()
                 val user = dbHelper.getLatestUser() ?: return@launch
-                val userId = user["id"] // The actual MongoDB ID
+                val userId = user["server_id"] ?: ""
+
+                if (userId.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProfileActivity, "User ID missing", Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
 
                 val request = Request.Builder()
                     .url("http://10.0.2.2:8080/api/users/$userId/deactivate")
@@ -255,13 +300,15 @@ class ProfileActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
+                        // mark inactive in SharedPreferences for consistency
+                        prefs.edit().putBoolean("is_active", false).apply()
                         Toast.makeText(
                             this@ProfileActivity,
                             "Account deactivated successfully.",
                             Toast.LENGTH_LONG
                         ).show()
 
-                        // ✅ Fully log out the user
+                        // ✅ Fully log out the user (clears SQLite + SharedPreferences)
                         logout()
                     } else {
                         Toast.makeText(
@@ -283,6 +330,9 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
+    // ===========================
+    //        UI HELPERS
+    // ===========================
     private fun toggleEditMode() {
         isEditMode = !isEditMode
         setEditMode(isEditMode)
@@ -300,14 +350,15 @@ class ProfileActivity : AppCompatActivity() {
         } else {
             editToggleButton.text = "Edit"
             saveProfileButton.visibility = android.view.View.GONE
-            // Reload data from DB to discard any unsaved changes
-            loadUserData()
+            loadUserData() // discard unsaved edits
         }
     }
 
     private fun logout() {
-        // ✅ Clear user data from the local database
+        // ✅ Clear local DB
         dbHelper.clearUsers()
+        // ✅ Clear SharedPreferences
+        prefs.edit().clear().apply()
 
         Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
         navigateToLogin()
@@ -320,7 +371,6 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun navigateToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
-        // Clear the activity stack to prevent the user from going back to the profile
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
@@ -333,6 +383,5 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun navigateToBooking() {
         startActivity(Intent(this, BookingActivity::class.java))
-        // Do not finish, so the user can come back
     }
 }

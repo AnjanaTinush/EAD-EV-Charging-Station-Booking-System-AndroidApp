@@ -11,13 +11,16 @@ class DatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "EVChargingStation.db"
-        private const val DATABASE_VERSION = 2
+        // ⬇️ Bump version because schema changes
+        private const val DATABASE_VERSION = 3
 
         // ====================== USER TABLE ======================
         const val TABLE_USER = "users"
-        const val COLUMN_ID = "id"
+        const val COLUMN_ID = "id" // local row id (INTEGER PK)
+        const val COLUMN_SERVER_ID = "server_id" // ⬅️ stores backend "id"
+        const val COLUMN_USERNAME = "username"   // ⬅️ stores backend "username"
         const val COLUMN_NIC = "nic"
-        const val COLUMN_FULL_NAME = "full_name"
+        const val COLUMN_FULL_NAME = "full_name" // keep for backward compatibility
         const val COLUMN_EMAIL = "email"
         const val COLUMN_PHONE = "phone"
         const val COLUMN_PASSWORD = "password"
@@ -40,11 +43,13 @@ class DatabaseHelper(context: Context) :
         private const val CREATE_USER_TABLE = """
             CREATE TABLE $TABLE_USER (
                 $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_NIC TEXT NOT NULL UNIQUE,
-                $COLUMN_FULL_NAME TEXT NOT NULL,
-                $COLUMN_EMAIL TEXT NOT NULL UNIQUE,
+                $COLUMN_SERVER_ID TEXT NOT NULL UNIQUE,
+                $COLUMN_USERNAME TEXT NOT NULL,
+                $COLUMN_NIC TEXT NOT NULL,
+                $COLUMN_FULL_NAME TEXT, 
+                $COLUMN_EMAIL TEXT NOT NULL,
                 $COLUMN_PHONE TEXT NOT NULL,
-                $COLUMN_PASSWORD TEXT NOT NULL,
+                $COLUMN_PASSWORD TEXT,
                 $COLUMN_IS_ACTIVE INTEGER DEFAULT 1,
                 $COLUMN_ROLE TEXT DEFAULT 'EvOwner',
                 $COLUMN_CREATED_AT_USER TEXT NOT NULL,
@@ -66,16 +71,13 @@ class DatabaseHelper(context: Context) :
         """
     }
 
-    // ==============================================================
-    //                       DATABASE SETUP
-    // ==============================================================
-
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(CREATE_USER_TABLE)
         db.execSQL(CREATE_RESERVATION_TABLE)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // Simple reset migration (keeps things minimal)
         db.execSQL("DROP TABLE IF EXISTS $TABLE_RESERVATION")
         db.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
         onCreate(db)
@@ -85,31 +87,47 @@ class DatabaseHelper(context: Context) :
     //                    USER MANAGEMENT FUNCTIONS
     // ==============================================================
 
-    // 🧩 Insert or replace logged-in user (used in login)
+    /**
+     * Insert/replace the **logged-in** user from backend response.
+     * @param serverId backend "id"
+     * @param username backend "username"
+     * @param email backend "email"
+     * @param phone backend "phone"
+     * @param nic backend "nic"
+     * @param role backend "role"
+     * @param isActive backend "isActive"
+     * @param createdAt timestamp string
+     */
     fun insertUser(
-        nic: String,
-        fullName: String,
+        serverId: String,
+        username: String,
         email: String,
         phone: String,
+        nic: String,
         role: String,
+        isActive: Boolean,
         createdAt: String
     ) {
         val db = writableDatabase
         val values = ContentValues().apply {
-            put(COLUMN_NIC, nic)
-            put(COLUMN_FULL_NAME, fullName)
+            put(COLUMN_SERVER_ID, serverId)
+            put(COLUMN_USERNAME, username)
             put(COLUMN_EMAIL, email)
             put(COLUMN_PHONE, phone)
-            put(COLUMN_PASSWORD, "") // not storing actual password for security
-            put(COLUMN_IS_ACTIVE, 1)
+            put(COLUMN_NIC, nic)
             put(COLUMN_ROLE, role)
+            put(COLUMN_IS_ACTIVE, if (isActive) 1 else 0)
             put(COLUMN_CREATED_AT_USER, createdAt)
+            // Keep legacy fields consistent but optional
+            put(COLUMN_FULL_NAME, username) // map username into full_name for now
+            put(COLUMN_PASSWORD, "")        // never store plaintext password
         }
+        // Replace by UNIQUE(server_id)
         db.insertWithOnConflict(TABLE_USER, null, values, SQLiteDatabase.CONFLICT_REPLACE)
         db.close()
     }
 
-    // 🧩 Get user by NIC
+    // Get user by NIC (now also returns server fields)
     fun getUserByNic(nic: String): Map<String, String>? {
         val db = readableDatabase
         val cursor: Cursor = db.query(
@@ -125,11 +143,14 @@ class DatabaseHelper(context: Context) :
         var user: Map<String, String>? = null
         if (cursor.moveToFirst()) {
             user = mapOf(
+                "server_id" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SERVER_ID)),
+                "username" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME)),
                 "nic" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NIC)),
-                "full_name" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FULL_NAME)),
+                "full_name" to (cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FULL_NAME)) ?: ""),
                 "email" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)),
                 "phone" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PHONE)),
-                "role" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROLE))
+                "role" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROLE)),
+                "is_active" to cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_ACTIVE)).toString()
             )
         }
         cursor.close()
@@ -137,14 +158,7 @@ class DatabaseHelper(context: Context) :
         return user
     }
 
-    // 🧩 Clear all users (used before inserting a new login)
-    fun clearUsers() {
-        val db = writableDatabase
-        db.delete(TABLE_USER, null, null)
-        db.close()
-    }
-
-    // 🧩 Get the most recently logged-in user (used in HomeActivity)
+    // Get latest logged-in user (now includes server_id & username)
     fun getLatestUser(): Map<String, String>? {
         val db = readableDatabase
         val cursor = db.rawQuery("SELECT * FROM $TABLE_USER ORDER BY $COLUMN_ID DESC LIMIT 1", null)
@@ -152,17 +166,26 @@ class DatabaseHelper(context: Context) :
         var user: Map<String, String>? = null
         if (cursor.moveToFirst()) {
             user = mapOf(
+                "server_id" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SERVER_ID)),
+                "username" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME)),
                 "nic" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NIC)),
-                "full_name" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FULL_NAME)),
+                "full_name" to (cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FULL_NAME)) ?: ""),
                 "email" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)),
                 "phone" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PHONE)),
-                "role" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROLE))
+                "role" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROLE)),
+                "is_active" to cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_ACTIVE)).toString()
             )
         }
 
         cursor.close()
         db.close()
         return user
+    }
+
+    fun clearUsers() {
+        val db = writableDatabase
+        db.delete(TABLE_USER, null, null)
+        db.close()
     }
 
     fun isUserLoggedIn(): Boolean {

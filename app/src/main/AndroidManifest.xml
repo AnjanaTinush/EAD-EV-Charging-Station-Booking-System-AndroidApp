@@ -30,7 +30,7 @@
             </intent-filter>
         </activity>
 
-        <!-- LoginActivity (after splash) -->
+        <!-- LoginActivity -->
         <activity
             android:name=".LoginActivity"
             android:exported="false" />
@@ -43,6 +43,11 @@
         <!-- HomeActivity -->
         <activity
             android:name=".HomeActivity"
+            android:exported="false" />
+
+        <!-- ✅ StationOperatorHomeActivity -->
+        <activity
+            android:name=".StationOperatorHomeActivity"
             android:exported="false" />
 
         <!-- ProfileActivity -->
