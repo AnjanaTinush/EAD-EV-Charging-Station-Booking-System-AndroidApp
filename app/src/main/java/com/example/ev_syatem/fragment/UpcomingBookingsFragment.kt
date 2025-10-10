@@ -125,7 +125,19 @@ class UpcomingBookingsFragment : Fragment() {
                             Locale.US, "%04d-%02d-%02dT%02d:%02d:00Z",
                             year, month + 1, day, hour, minute
                         )
-                        updateBooking(booking.id, newDateTime)
+
+                        // ✅ FIX: Check availability before updating
+                        bookingRepository.checkAvailability(booking.stationId, newDateTime) { isAvailable, message ->
+                            activity?.runOnUiThread {
+                                if (isAvailable) {
+                                    // If available, proceed with the update
+                                    updateBooking(booking.id, newDateTime)
+                                } else {
+                                    // If not available, show an error toast
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
                     },
                     calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true
                 ).show()
