@@ -9,13 +9,20 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ev_syatem.database.DatabaseHelper
+// ✅ Import BookingRepository
+import com.example.ev_syatem.repository.BookingRepository
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var userNameText: TextView
+    // ✅ Add TextViews for the counts
+    private lateinit var pendingCountText: TextView
+    private lateinit var approvedCountText: TextView
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var dbHelper: DatabaseHelper
+    // ✅ Add an instance of the repository
+    private val bookingRepository = BookingRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,23 +32,57 @@ class HomeActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_home)
 
+        // ✅ Initialize all views
         userNameText = findViewById(R.id.user_name_text)
+        pendingCountText = findViewById(R.id.pending_count_text)
+        approvedCountText = findViewById(R.id.approved_count_text)
         bottomNavigation = findViewById(R.id.bottom_navigation)
         dbHelper = DatabaseHelper(this)
 
         loadUserData()
         setupBottomNavigation()
-        setupClickListeners() // ✅ Call the new function
+        setupClickListeners()
+    }
+
+    // Refresh data every time the user comes back to the home screen
+    override fun onResume() {
+        super.onResume()
+        loadBookingCounts()
     }
 
     private fun loadUserData() {
         val user = dbHelper.getLatestUser()
         if (user != null) {
-            // Assuming the key for the user's name is "username" from the login response
             userNameText.text = "Welcome, ${user["username"]}"
         } else {
             Toast.makeText(this, "Please log in again", Toast.LENGTH_SHORT).show()
             navigateToLogin()
+        }
+    }
+
+    // ✅ This function fetches the bookings and updates the UI
+    private fun loadBookingCounts() {
+        val user = dbHelper.getLatestUser()
+        val ownerNIC = user?.get("nic")
+
+        if (ownerNIC == null) {
+            // Can't fetch data without a user, so set counts to 0
+            pendingCountText.text = "0"
+            approvedCountText.text = "0"
+            return
+        }
+
+        // ✅ FIX: Use the correct, existing getUpcomingBookings function
+        bookingRepository.getUpcomingBookings(ownerNIC) { bookings ->
+            // Filter the list to get counts for each status
+            val pendingCount = bookings.count { it.status.equals("Pending", ignoreCase = true) }
+            val approvedCount = bookings.count { it.status.equals("Approved", ignoreCase = true) }
+
+            // Update the UI on the main thread
+            runOnUiThread {
+                pendingCountText.text = pendingCount.toString()
+                approvedCountText.text = approvedCount.toString()
+            }
         }
     }
 
@@ -54,7 +95,6 @@ class HomeActivity : AppCompatActivity() {
                     navigateToProfile()
                     true
                 }
-                // ✅ Add navigation for booking history
                 R.id.navigation_booking -> {
                     navigateToMyReservations()
                     true
@@ -64,14 +104,12 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ NEW: Centralize click listeners here
     private fun setupClickListeners() {
         val bookStationButton: LinearLayout = findViewById(R.id.book_station_button)
         bookStationButton.setOnClickListener {
             navigateToBooking()
         }
 
-        // ✅ Add listener for the new "My Reservations" button
         val myReservationsButton: LinearLayout = findViewById(R.id.my_reservations_button)
         myReservationsButton.setOnClickListener {
             navigateToMyReservations()
@@ -95,7 +133,6 @@ class HomeActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // ✅ NEW: Navigation function for My Reservations
     private fun navigateToMyReservations() {
         val intent = Intent(this, BookingsActivity::class.java)
         startActivity(intent)
