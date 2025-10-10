@@ -2,10 +2,8 @@ package com.example.ev_syatem.fragment
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-// ✅ FIX: Corrected the import statement
 import android.content.Intent
 import android.os.Bundle
-// ✅ FIX: Removed duplicate imports that were here
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,13 +16,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.ev_syatem.R
-// ✅ Import BookingDetailsActivity
 import com.example.ev_syatem.BookingDetailsActivity
 import com.example.ev_syatem.adapter.BookingAdapter
 import com.example.ev_syatem.data.Booking
 import com.example.ev_syatem.database.DatabaseHelper
 import com.example.ev_syatem.repository.BookingRepository
+import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class UpcomingBookingsFragment : Fragment() {
 
@@ -33,16 +32,13 @@ class UpcomingBookingsFragment : Fragment() {
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var emptyState: LinearLayout
     private lateinit var progressBar: ProgressBar
-
     private lateinit var bookingAdapter: BookingAdapter
     private val bookingRepository = BookingRepository()
     private val bookings = mutableListOf<Booking>()
     private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         dbHelper = DatabaseHelper(requireContext())
         return inflater.inflate(R.layout.fragment_upcoming_bookings, container, false)
@@ -56,11 +52,10 @@ class UpcomingBookingsFragment : Fragment() {
         emptyState = view.findViewById(R.id.empty_state)
         progressBar = view.findViewById(R.id.progress_bar)
 
-        setupRecyclerView() // This is where we will make the change
+        setupRecyclerView()
         setupSwipeRefresh()
     }
 
-    // ... (onResume, loadUpcomingBookings, etc. remain the same)
     override fun onResume() {
         super.onResume()
         loadUpcomingBookings()
@@ -69,18 +64,17 @@ class UpcomingBookingsFragment : Fragment() {
     private fun setupRecyclerView() {
         bookingAdapter = BookingAdapter(
             bookings,
-            // ✅ 3. Implement the onItemClick logic
             onItemClick = { booking ->
-                // Create an intent to navigate to the details activity
-                val intent = Intent(requireContext(), BookingDetailsActivity::class.java).apply {
-                    // Pass all the relevant data from the clicked booking
-                    putExtra("STATION_ID", booking.stationId)
-                    putExtra("RESERVATION_TIME", booking.reservationTime)
-                    putExtra("STATUS", booking.status)
-                    putExtra("QR_CODE", booking.qrCodeBase64)
+                // Navigate to details activity only for "Approved" bookings
+                if (booking.status.equals("Approved", ignoreCase = true)) {
+                    val intent = Intent(requireContext(), BookingDetailsActivity::class.java).apply {
+                        putExtra("STATION_ID", booking.stationId)
+                        putExtra("RESERVATION_TIME", booking.reservationTime)
+                        putExtra("STATUS", booking.status)
+                        putExtra("QR_CODE", booking.qrCodeBase64)
+                    }
+                    startActivity(intent)
                 }
-                // Start the activity
-                startActivity(intent)
             },
             onModifyClick = { booking -> showModifyDialog(booking) },
             onCancelClick = { booking -> showCancelDialog(booking) }
@@ -89,11 +83,91 @@ class UpcomingBookingsFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
     }
 
-    // ... (All other functions in the fragment remain the same)
     private fun setupSwipeRefresh() {
         swipeRefresh.setColorSchemeColors(requireContext().getColor(R.color.primary_green))
         swipeRefresh.setOnRefreshListener { loadUpcomingBookings() }
     }
+
+    // ✅ NEW: Helper to parse the reservation time string into a Date object
+    private fun parseDate(dateString: String): Date? {
+        return try {
+            // Handles format like "2025-10-10T05:34:00Z"
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            format.timeZone = TimeZone.getTimeZone("UTC")
+            format.parse(dateString)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun showModifyDialog(booking: Booking) {
+        val reservationDate = parseDate(booking.reservationTime)
+        if (reservationDate == null) {
+            Toast.makeText(context, "Invalid booking date format.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // ✅ VALIDATION: Check if the booking is at least 12 hours away
+        val hoursDifference = TimeUnit.MILLISECONDS.toHours(reservationDate.time - System.currentTimeMillis())
+        if (hoursDifference < 12) {
+            Toast.makeText(context, "Cannot modify a booking less than 12 hours away.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val calendar = Calendar.getInstance()
+        val datePicker = DatePickerDialog(
+            requireContext(),
+            { _, year, month, day ->
+                TimePickerDialog(
+                    requireContext(),
+                    { _, hour, minute ->
+                        val newDateTime = String.format(
+                            Locale.US, "%04d-%02d-%02dT%02d:%02d:00Z",
+                            year, month + 1, day, hour, minute
+                        )
+                        updateBooking(booking.id, newDateTime)
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true
+                ).show()
+            },
+            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+        )
+
+        // ✅ VALIDATION: Set min/max dates for the new reservation
+        val minDate = Calendar.getInstance()
+        minDate.add(Calendar.HOUR_OF_DAY, 12) // New date must be at least 12 hours from now
+        datePicker.datePicker.minDate = minDate.timeInMillis
+
+        val maxDate = Calendar.getInstance()
+        maxDate.add(Calendar.DAY_OF_YEAR, 7) // New date must be within 7 days from now
+        datePicker.datePicker.maxDate = maxDate.timeInMillis
+
+        datePicker.show()
+    }
+
+    private fun showCancelDialog(booking: Booking) {
+        val reservationDate = parseDate(booking.reservationTime)
+        if (reservationDate == null) {
+            Toast.makeText(context, "Invalid booking date format.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // ✅ VALIDATION: Check if the booking is at least 12 hours away
+        val hoursDifference = TimeUnit.MILLISECONDS.toHours(reservationDate.time - System.currentTimeMillis())
+        if (hoursDifference < 12) {
+            Toast.makeText(context, "Cannot cancel a booking less than 12 hours away.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Cancel Booking")
+            .setMessage("Are you sure you want to cancel this booking?")
+            .setPositiveButton("Yes, Cancel") { _, _ -> cancelBooking(booking.id) }
+            .setNegativeButton("No", null)
+            .show()
+    }
+
+    // ... (rest of your functions: updateBooking, cancelBooking, loadUpcomingBookings, etc. remain the same)
 
     private fun loadUpcomingBookings() {
         showLoading(true)
@@ -117,34 +191,6 @@ class UpcomingBookingsFragment : Fragment() {
         }
     }
 
-    private fun showModifyDialog(booking: Booking) {
-        val calendar = Calendar.getInstance()
-        val datePicker = DatePickerDialog(
-            requireContext(),
-            { _, year, month, day ->
-                TimePickerDialog(
-                    requireContext(),
-                    { _, hour, minute ->
-                        val newDateTime = String.format(
-                            Locale.US,
-                            "%04d-%02d-%02dT%02d:%02d:00Z",
-                            year, month + 1, day, hour, minute
-                        )
-                        updateBooking(booking.id, newDateTime)
-                    },
-                    calendar.get(Calendar.HOUR_OF_DAY),
-                    calendar.get(Calendar.MINUTE),
-                    true
-                ).show()
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-        datePicker.datePicker.minDate = System.currentTimeMillis()
-        datePicker.show()
-    }
-
     private fun updateBooking(bookingId: String, newDateTime: String) {
         showLoading(true)
         bookingRepository.updateBooking(bookingId, newDateTime) { success, message ->
@@ -157,17 +203,6 @@ class UpcomingBookingsFragment : Fragment() {
                 }
             }
         }
-    }
-
-    private fun showCancelDialog(booking: Booking) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Cancel Booking")
-            .setMessage("Are you sure you want to cancel this booking?")
-            .setPositiveButton("Yes, Cancel") { _, _ ->
-                cancelBooking(booking.id)
-            }
-            .setNegativeButton("No", null)
-            .show()
     }
 
     private fun cancelBooking(bookingId: String) {
