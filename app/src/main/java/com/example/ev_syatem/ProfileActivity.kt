@@ -22,7 +22,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
-class ProfileActivity : AppCompatActivity() {
+open class ProfileActivity : AppCompatActivity() {
 
     private lateinit var profileNameText: TextView
     private lateinit var profileNicText: TextView
