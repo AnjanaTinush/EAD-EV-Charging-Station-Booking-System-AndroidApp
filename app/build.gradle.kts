@@ -59,5 +59,12 @@ dependencies {
     implementation("org.json:json:20240303")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
+    val cameraxVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
 
 }
