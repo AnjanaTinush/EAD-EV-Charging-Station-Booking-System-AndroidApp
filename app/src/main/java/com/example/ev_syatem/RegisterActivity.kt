@@ -155,7 +155,7 @@ class RegisterActivity : AppCompatActivity() {
         val requestBody = jsonBody.toString().toRequestBody(mediaType)
 
         val request = Request.Builder()
-            .url("http://10.0.2.2:8080/api/auth/register") // ✅ Correct API endpoint
+            .url("http://172.28.16.189:8080/api/auth/register") // ✅ Correct API endpoint
             .post(requestBody)
             .build()
 

@@ -190,9 +190,9 @@ open class ProfileActivity : AppCompatActivity() {
                 val requestBody = jsonBody.toString()
                     .toRequestBody("application/json".toMediaType())
 
-                // Use 10.0.2.2 for Android emulator to reach localhost of host
+                // Use 172.28.16.189 for Android emulator to reach localhost of host
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:8080/api/users/$userId")
+                    .url("http://172.28.16.189:8080/api/users/$userId")
                     .put(requestBody)
                     .build()
 
@@ -291,7 +291,7 @@ open class ProfileActivity : AppCompatActivity() {
                 }
 
                 val request = Request.Builder()
-                    .url("http://10.0.2.2:8080/api/users/$userId/deactivate")
+                    .url("http://172.28.16.189:8080/api/users/$userId/deactivate")
                     .patch("".toRequestBody("application/json".toMediaType()))
                     .build()
 

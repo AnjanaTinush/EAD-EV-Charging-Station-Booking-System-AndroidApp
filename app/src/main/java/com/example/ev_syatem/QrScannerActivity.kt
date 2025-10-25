@@ -1,6 +1,7 @@
 package com.example.ev_syatem
 
 import android.Manifest
+import android.content.Intent // ✅ Import Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -33,7 +34,6 @@ class QrScannerActivity : AppCompatActivity() {
 
         findViewById<CardView>(R.id.btn_back_scanner).setOnClickListener { finish() }
 
-        // Request camera permission
         if (allPermissionsGranted()) {
             startCamera()
         } else {
@@ -48,13 +48,9 @@ class QrScannerActivity : AppCompatActivity() {
 
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            // Set up the preview
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(findViewById<PreviewView>(R.id.camera_preview).surfaceProvider)
             }
-
-            // Set up the image analyzer for barcode scanning
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
@@ -63,23 +59,13 @@ class QrScannerActivity : AppCompatActivity() {
                         processImageProxy(imageProxy)
                     }
                 }
-
-            // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
             try {
-                // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
-
-                // Bind use cases to camera
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalyzer
-                )
-
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
-
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -88,8 +74,6 @@ class QrScannerActivity : AppCompatActivity() {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            // Configure the barcode scanner
             val options = BarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                 .build()
@@ -98,22 +82,24 @@ class QrScannerActivity : AppCompatActivity() {
             barcodeScanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     if (barcodes.isNotEmpty()) {
-                        // We found a QR code
                         val qrCodeData = barcodes[0].rawValue
+                        // ✅ We found a QR code, stop the scanner and navigate
                         cameraExecutor.shutdown()
+
                         runOnUiThread {
-                            Toast.makeText(this, "QR Code Data: $qrCodeData", Toast.LENGTH_LONG).show()
-                            // Here you would typically pass the data back to another activity
-                            // or handle it directly (e.g., validate the booking ID).
+                            // ✅ Navigate to PaymentActivity with the scanned data
+                            val intent = Intent(this, PaymentActivity::class.java).apply {
+                                putExtra("BOOKING_ID", qrCodeData)
+                            }
+                            startActivity(intent)
+                            finish() // Close the scanner
                         }
-                        finish() // Close the scanner after finding a code
                     }
                 }
                 .addOnFailureListener {
                     Log.e(TAG, "Barcode scanning failed", it)
                 }
                 .addOnCompleteListener {
-                    // When the analysis is complete, close the image proxy
                     imageProxy.close()
                 }
         }
@@ -123,9 +109,7 @@ class QrScannerActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
