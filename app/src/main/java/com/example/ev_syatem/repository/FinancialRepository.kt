@@ -9,7 +9,7 @@ class FinancialRepository {
 
     private val client = OkHttpClient()
     // Make sure to use the correct IP address for your local server
-    private val baseUrl = "http://172.28.16.189:8080/api/financial"
+    private val baseUrl = "http://172.20.10.9:8080/api/financial"
 
     fun createFinancialRecord(
         username: String,

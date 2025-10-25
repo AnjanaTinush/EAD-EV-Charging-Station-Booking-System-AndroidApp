@@ -103,7 +103,7 @@ class LoginActivity : AppCompatActivity() {
 
                 // Correct API endpoint for mobile login (IIS hosted)
                 val request = Request.Builder()
-                    .url("http://172.28.16.189:8080/api/auth/login?platform=mobile")
+                    .url("http://172.20.10.9:8080/api/auth/login?platform=mobile")
                     .post(requestBody)
                     .build()
 

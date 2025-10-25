@@ -16,7 +16,7 @@ import java.io.IOException
 class BookingRepository {
 
     private val client = OkHttpClient()
-    private val baseUrl = "http://172.28.16.189:8080/api/booking"
+    private val baseUrl = "http://172.20.10.9:8080/api/booking"
 
     // Create new booking
     fun createBooking(booking: Booking, callback: (Boolean, String) -> Unit) {
@@ -160,7 +160,7 @@ class BookingRepository {
     // Get active stations
     fun getActiveStations(callback: (List<Station>) -> Unit) {
         val request = Request.Builder()
-            .url("http://172.28.16.189:8080/api/Station")
+            .url("http://172.20.10.9:8080/api/Station")
             .get()
             .build()
 
@@ -201,7 +201,7 @@ class BookingRepository {
     // Check availability
     fun checkAvailability(stationId: String, reservationTime: String, callback: (isAvailable: Boolean, message: String) -> Unit) {
         val request = Request.Builder()
-            .url("http://172.28.16.189:8080/api/booking/all")
+            .url("http://172.20.10.9:8080/api/booking/all")
             .get()
             .build()
 
